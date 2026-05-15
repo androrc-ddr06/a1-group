@@ -6,14 +6,35 @@ import { Send, CheckCircle } from "lucide-react";
 export default function ContactSection() {
   const [submitted, setSubmitted] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+
+  const [form, setForm] = useState({
+    name: "", company: "", email: "", service: "", message: "",
+  });
+
+  function handleChange(e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) {
+    setForm((prev) => ({ ...prev, [e.target.name]: e.target.value }));
+    setError("");
+  }
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setLoading(true);
-    // Simulate submission — wire up Resend/API route later
-    await new Promise((r) => setTimeout(r, 1000));
+    setError("");
+
+    const res = await fetch("/api/contact", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(form),
+    });
+
+    if (res.ok) {
+      setSubmitted(true);
+    } else {
+      const data = await res.json();
+      setError(data.error || "Something went wrong. Please try again.");
+    }
     setLoading(false);
-    setSubmitted(true);
   }
 
   return (
@@ -70,7 +91,10 @@ export default function ContactSection() {
                     </label>
                     <input
                       type="text"
+                      name="name"
                       required
+                      value={form.name}
+                      onChange={handleChange}
                       placeholder="John Smith"
                       className="w-full bg-white/5 border border-white/15 rounded-xl px-4 py-3 text-white placeholder:text-white/25 text-sm focus:outline-none focus:border-[#c9a84c]/50 focus:bg-white/8 transition-all"
                     />
@@ -81,7 +105,9 @@ export default function ContactSection() {
                     </label>
                     <input
                       type="text"
-                      required
+                      name="company"
+                      value={form.company}
+                      onChange={handleChange}
                       placeholder="Acme Co."
                       className="w-full bg-white/5 border border-white/15 rounded-xl px-4 py-3 text-white placeholder:text-white/25 text-sm focus:outline-none focus:border-[#c9a84c]/50 focus:bg-white/8 transition-all"
                     />
@@ -94,7 +120,10 @@ export default function ContactSection() {
                   </label>
                   <input
                     type="email"
+                    name="email"
                     required
+                    value={form.email}
+                    onChange={handleChange}
                     placeholder="you@business.com"
                     className="w-full bg-white/5 border border-white/15 rounded-xl px-4 py-3 text-white placeholder:text-white/25 text-sm focus:outline-none focus:border-[#c9a84c]/50 focus:bg-white/8 transition-all"
                   />
@@ -105,17 +134,20 @@ export default function ContactSection() {
                     What do you need help with?
                   </label>
                   <select
+                    name="service"
+                    value={form.service}
+                    onChange={handleChange}
                     className="w-full bg-white/5 border border-white/15 rounded-xl px-4 py-3 text-white text-sm focus:outline-none focus:border-[#c9a84c]/50 transition-all appearance-none"
                     style={{ colorScheme: "dark" }}
                   >
                     <option value="" className="bg-[#0a1628]">Select a service...</option>
-                    <option value="social" className="bg-[#0a1628]">Social Media Management</option>
-                    <option value="content" className="bg-[#0a1628]">Content Production</option>
-                    <option value="ads" className="bg-[#0a1628]">Paid Advertising</option>
-                    <option value="branding" className="bg-[#0a1628]">Branding & Identity</option>
-                    <option value="web" className="bg-[#0a1628]">Website Design</option>
-                    <option value="ai" className="bg-[#0a1628]">AI Integration</option>
-                    <option value="all" className="bg-[#0a1628]">Full-Service / Not Sure Yet</option>
+                    <option value="Social Media Management" className="bg-[#0a1628]">Social Media Management</option>
+                    <option value="Content Production" className="bg-[#0a1628]">Content Production</option>
+                    <option value="Paid Advertising" className="bg-[#0a1628]">Paid Advertising</option>
+                    <option value="Branding & Identity" className="bg-[#0a1628]">Branding & Identity</option>
+                    <option value="Website Design" className="bg-[#0a1628]">Website Design</option>
+                    <option value="AI Integration" className="bg-[#0a1628]">AI Integration</option>
+                    <option value="Full-Service / Not Sure Yet" className="bg-[#0a1628]">Full-Service / Not Sure Yet</option>
                   </select>
                 </div>
 
@@ -124,11 +156,21 @@ export default function ContactSection() {
                     Tell us about your business
                   </label>
                   <textarea
+                    name="message"
                     rows={4}
+                    required
+                    value={form.message}
+                    onChange={handleChange}
                     placeholder="What does your business do, and what's your main goal right now?"
                     className="w-full bg-white/5 border border-white/15 rounded-xl px-4 py-3 text-white placeholder:text-white/25 text-sm focus:outline-none focus:border-[#c9a84c]/50 focus:bg-white/8 transition-all resize-none"
                   />
                 </div>
+
+                {error && (
+                  <p className="text-red-400 text-sm bg-red-400/10 border border-red-400/20 rounded-lg px-4 py-2">
+                    {error}
+                  </p>
+                )}
 
                 <button
                   type="submit"
