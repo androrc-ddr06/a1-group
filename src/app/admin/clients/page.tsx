@@ -10,7 +10,7 @@ import {
   ExternalLink,
 } from "lucide-react";
 
-const ADMIN_SECRET = "a1group-admin-2026";
+const ADMIN_SECRET = "Familiarc15$";
 
 function generateCode() {
   return Math.random().toString(36).substring(2, 10).toUpperCase();
