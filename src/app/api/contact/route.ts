@@ -11,7 +11,7 @@ export async function POST(req: NextRequest) {
 
   const { error } = await resend.emails.send({
     from: "A1 Group Website <onboarding@resend.dev>",
-    to: process.env.NOTIFICATION_EMAIL!,
+    to: process.env.NOTIFICATION_EMAIL ?? "andro.rc06@gmail.com",
     replyTo: email,
     subject: `New inquiry from ${name}${company ? ` — ${company}` : ""}`,
     html: `
