@@ -1,5 +1,6 @@
+import { redirect } from "next/navigation";
 import Link from "next/link";
-import { createServerClient } from "@/lib/supabase-server";
+import { createSessionClient, createServerClient } from "@/lib/supabase-server";
 import {
   TrendingUp,
   FileText,
@@ -8,34 +9,50 @@ import {
   LogOut,
   Clock,
 } from "lucide-react";
+import SignOutButton from "./SignOutButton";
 
 async function getClientData() {
-  const supabase = createServerClient();
+  const supabase = await createSessionClient();
 
-  // For now fetch Ruben's data directly — will use session cookie once auth is fully wired
-  const { data: client } = await supabase
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return null;
+
+  // Use service client to query client record by auth user id
+  const admin = createServerClient();
+
+  const { data: client } = await admin
     .from("clients")
     .select("*")
-    .eq("email", "ruben@roostersrollingbbq.com")
+    .eq("auth_user_id", user.id)
     .single();
 
-  if (!client) return null;
+  // Fallback: match by email (for Ruben whose record predates auth)
+  const resolvedClient = client ?? await (async () => {
+    const { data } = await admin
+      .from("clients")
+      .select("*")
+      .eq("email", user.email)
+      .single();
+    return data;
+  })();
 
-  const { data: project } = await supabase
+  if (!resolvedClient) return null;
+
+  const { data: project } = await admin
     .from("projects")
     .select("*")
-    .eq("client_id", client.id)
+    .eq("client_id", resolvedClient.id)
     .order("created_at", { ascending: false })
     .limit(1)
     .single();
 
-  const { data: updates } = await supabase
+  const { data: updates } = await admin
     .from("client_updates")
     .select("*")
-    .eq("client_id", client.id)
+    .eq("client_id", resolvedClient.id)
     .order("created_at", { ascending: false });
 
-  return { client, project, updates: updates ?? [] };
+  return { client: resolvedClient, project, updates: updates ?? [] };
 }
 
 function formatDate(dateStr: string | null | undefined) {
@@ -51,11 +68,7 @@ export default async function ClientDashboard() {
   const data = await getClientData();
 
   if (!data) {
-    return (
-      <div className="min-h-screen bg-[#0a1628] flex items-center justify-center text-white">
-        <p>Unable to load dashboard. Please try again.</p>
-      </div>
-    );
+    redirect("/portal/login");
   }
 
   const { client, project, updates } = data;
@@ -77,13 +90,7 @@ export default async function ClientDashboard() {
             <span className="text-white/50 text-sm hidden sm:block">
               {client.company}
             </span>
-            <Link
-              href="/portal/login"
-              className="flex items-center gap-1.5 text-white/40 hover:text-white/70 text-sm transition-colors"
-            >
-              <LogOut size={14} />
-              <span className="hidden sm:block">Sign Out</span>
-            </Link>
+            <SignOutButton />
           </div>
         </div>
       </header>

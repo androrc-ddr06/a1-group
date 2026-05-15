@@ -4,6 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Eye, EyeOff, ArrowRight, Lock } from "lucide-react";
+import { createClient } from "@/lib/supabase-browser";
 
 export default function PortalLogin() {
   const router = useRouter();
@@ -28,20 +29,67 @@ export default function PortalLogin() {
     setLoading(true);
     setError("");
 
-    // Placeholder — will wire to Supabase auth
-    await new Promise((r) => setTimeout(r, 800));
+    const supabase = createClient();
 
     if (mode === "signup") {
-      // Validate access code before creating account
-      if (form.accessCode.length !== 8) {
-        setError("Please enter your 8-character access code.");
+      if (form.accessCode.length < 6) {
+        setError("Please enter your access code from A1 Group.");
         setLoading(false);
         return;
       }
+
+      // Validate code + create account via API route
+      const res = await fetch("/api/auth/signup", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          email: form.email,
+          password: form.password,
+          accessCode: form.accessCode,
+        }),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        setError(data.error || "Something went wrong. Please try again.");
+        setLoading(false);
+        return;
+      }
+
+      // Sign in after account is created
+      const { error: signInError } = await supabase.auth.signInWithPassword({
+        email: form.email,
+        password: form.password,
+      });
+
+      if (signInError) {
+        setError("Account created! Please sign in below.");
+        setMode("login");
+        setLoading(false);
+        return;
+      }
+
       router.push("/portal/onboarding");
     } else {
+      const { error: signInError } = await supabase.auth.signInWithPassword({
+        email: form.email,
+        password: form.password,
+      });
+
+      if (signInError) {
+        if (signInError.message.includes("Invalid login credentials")) {
+          setError("Incorrect email or password. Please try again.");
+        } else {
+          setError(signInError.message);
+        }
+        setLoading(false);
+        return;
+      }
+
       router.push("/portal/dashboard");
     }
+
     setLoading(false);
   }
 
@@ -64,7 +112,7 @@ export default function PortalLogin() {
             {(["login", "signup"] as const).map((m) => (
               <button
                 key={m}
-                onClick={() => setMode(m)}
+                onClick={() => { setMode(m); setError(""); }}
                 className={`flex-1 py-2 rounded-lg text-sm font-semibold transition-all ${
                   mode === m
                     ? "bg-[#c9a84c] text-[#0a1628]"
@@ -127,8 +175,8 @@ export default function PortalLogin() {
                   name="accessCode"
                   value={form.accessCode}
                   onChange={handleChange}
-                  placeholder="8-character code from A1 Group"
-                  maxLength={8}
+                  placeholder="Code from A1 Group"
+                  maxLength={10}
                   className="w-full bg-white/5 border border-white/15 rounded-xl px-4 py-3 text-white placeholder:text-white/25 text-sm focus:outline-none focus:border-[#c9a84c]/60 transition-all font-mono tracking-widest uppercase"
                 />
                 <p className="text-white/30 text-xs mt-1.5">
@@ -157,7 +205,7 @@ export default function PortalLogin() {
             <p className="text-white/30 text-xs text-center mt-4">
               New client?{" "}
               <button
-                onClick={() => setMode("signup")}
+                onClick={() => { setMode("signup"); setError(""); }}
                 className="text-[#c9a84c] hover:text-[#d4af61] font-medium"
               >
                 Create your account

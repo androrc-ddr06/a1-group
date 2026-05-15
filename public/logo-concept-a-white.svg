@@ -1,0 +1,41 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 100" fill="none">
+  <!-- A lettermark -->
+  <g>
+    <path d="M 30 78 L 58 22 L 62 22 L 90 78 L 78 78 L 60 36 L 42 78 Z" fill="white"/>
+    <rect x="45" y="58" width="30" height="7" rx="1" fill="white"/>
+    <polygon points="60,8 53,24 67,24" fill="#C9A84C"/>
+  </g>
+
+  <!-- 1 numeral -->
+  <g>
+    <rect x="104" y="22" width="10" height="56" rx="2" fill="white"/>
+    <path d="M 88 36 L 104 22 L 114 22" stroke="white" stroke-width="10" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+    <rect x="90" y="72" width="34" height="7" rx="3" fill="white"/>
+  </g>
+
+  <!-- Divider -->
+  <rect x="158" y="28" width="2" height="44" rx="1" fill="#C9A84C" opacity="0.5"/>
+
+  <!-- GROUP -->
+  <text
+    x="172"
+    y="50"
+    font-family="'Arial Black', 'Helvetica Neue', Arial, sans-serif"
+    font-weight="900"
+    font-size="22"
+    letter-spacing="8"
+    fill="white"
+  >GROUP</text>
+
+  <!-- Tagline -->
+  <text
+    x="172"
+    y="68"
+    font-family="Arial, Helvetica, sans-serif"
+    font-weight="400"
+    font-size="9"
+    letter-spacing="3"
+    fill="#C9A84C"
+    opacity="0.9"
+  >MARKETING AGENCY</text>
+</svg>
