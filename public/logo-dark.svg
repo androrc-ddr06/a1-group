@@ -1,0 +1,33 @@
+<svg width="900" height="320" viewBox="0 0 900 320" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect width="900" height="320" fill="#0A1628"/>
+
+  <!-- Symbol -->
+  <g transform="translate(90 45)">
+    <!-- A Shape -->
+    <path d="M0 210L90 0H150L240 210H185L120 55L55 210H0Z" fill="white"/>
+    <!-- Inner Cut -->
+    <path d="M84 145L120 70L156 145H84Z" fill="#0A1628"/>
+    <!-- 1 Accent -->
+    <rect x="205" y="0" width="22" height="210" rx="11" fill="#C9A84C"/>
+  </g>
+
+  <!-- Wordmark -->
+  <g transform="translate(380 115)">
+    <text x="0" y="0"
+      fill="white"
+      font-size="96"
+      font-family="Helvetica, Arial, sans-serif"
+      font-weight="700"
+      letter-spacing="2">
+      A1
+    </text>
+    <text x="4" y="58"
+      fill="#C9A84C"
+      font-size="24"
+      font-family="Helvetica, Arial, sans-serif"
+      font-weight="600"
+      letter-spacing="10">
+      GROUP
+    </text>
+  </g>
+</svg>

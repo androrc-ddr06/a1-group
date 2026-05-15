@@ -96,9 +96,8 @@ export default function AdminClients() {
       <header className="bg-[#0a1628] border-b border-white/10 px-6 py-4">
         <div className="max-w-7xl mx-auto flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <Link href="/" className="flex items-center gap-1.5">
-              <span className="text-xl font-extrabold">A1</span>
-              <span className="text-[#c9a84c] font-extrabold text-xl">▲</span>
+            <Link href="/">
+              <img src="/logo-dark.svg" alt="A1 Group" className="h-8 w-auto" />
             </Link>
             <span className="text-white/20 text-xs">|</span>
             <span className="text-white/50 text-sm font-medium">Admin Panel</span>

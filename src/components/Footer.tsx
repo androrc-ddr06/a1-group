@@ -8,12 +8,8 @@ export default function Footer() {
         <div className="grid grid-cols-1 md:grid-cols-4 gap-10">
           {/* Brand */}
           <div className="md:col-span-2">
-            <div className="flex items-center gap-2 mb-4">
-              <span className="text-2xl font-extrabold text-white">A1</span>
-              <span className="text-[#c9a84c] font-extrabold text-2xl">▲</span>
-              <span className="text-white/70 font-semibold tracking-[0.2em] text-xs uppercase mt-0.5">
-                GROUP
-              </span>
+            <div className="mb-4">
+              <img src="/logo-dark.svg" alt="A1 Group" className="h-12 w-auto" />
             </div>
             <p className="text-white/50 text-sm leading-relaxed max-w-xs">
               Full-service marketing agency helping businesses dominate their

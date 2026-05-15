@@ -49,12 +49,8 @@ export default function PortalLogin() {
     <div className="min-h-screen bg-[#0a1628] flex items-center justify-center px-6 py-20">
       <div className="w-full max-w-md">
         {/* Logo */}
-        <Link href="/" className="flex items-center gap-2 justify-center mb-10">
-          <span className="text-2xl font-extrabold text-white">A1</span>
-          <span className="text-[#c9a84c] font-extrabold text-2xl">▲</span>
-          <span className="text-white/60 font-semibold tracking-[0.2em] text-xs uppercase mt-0.5">
-            GROUP
-          </span>
+        <Link href="/" className="flex justify-center mb-10">
+          <img src="/logo-dark.svg" alt="A1 Group" className="h-12 w-auto" />
         </Link>
 
         <div className="bg-white/5 border border-white/10 rounded-2xl p-8">

@@ -89,12 +89,8 @@ export default function OnboardingPage() {
     <div className="min-h-screen bg-[#0a1628] px-6 py-16">
       <div className="max-w-2xl mx-auto">
         {/* Logo */}
-        <Link href="/" className="flex items-center gap-2 mb-10">
-          <span className="text-xl font-extrabold text-white">A1</span>
-          <span className="text-[#c9a84c] font-extrabold text-xl">▲</span>
-          <span className="text-white/60 font-semibold tracking-[0.2em] text-xs uppercase mt-0.5">
-            GROUP
-          </span>
+        <Link href="/" className="flex mb-10">
+          <img src="/logo-dark.svg" alt="A1 Group" className="h-10 w-auto" />
         </Link>
 
         {/* Progress bar */}

@@ -34,16 +34,12 @@ export default function Navbar() {
       <div className="max-w-7xl mx-auto px-6 lg:px-8">
         <div className="flex items-center justify-between h-18 py-4">
           {/* Logo */}
-          <Link href="/" className="flex items-center gap-2 group">
-            <div className="flex items-center gap-1">
-              <span className="text-2xl font-extrabold text-white tracking-tight leading-none">
-                A1
-              </span>
-              <span className="text-[#c9a84c] font-extrabold text-2xl leading-none">▲</span>
-            </div>
-            <span className="text-white/80 font-semibold tracking-[0.2em] text-xs uppercase mt-0.5">
-              GROUP
-            </span>
+          <Link href="/" className="flex items-center">
+            <img
+              src="/logo-dark.svg"
+              alt="A1 Group"
+              className="h-10 w-auto"
+            />
           </Link>
 
           {/* Desktop nav */}
