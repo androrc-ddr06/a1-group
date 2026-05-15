@@ -91,7 +91,15 @@ export default function Footer() {
 
         <div className="border-t border-white/10 mt-12 pt-6 flex flex-col sm:flex-row items-center justify-between gap-2 text-xs text-white/30">
           <span>© {new Date().getFullYear()} A1 Group. All rights reserved.</span>
-          <span>Built with precision. Driven by results.</span>
+          <div className="flex items-center gap-4">
+            <span>Built with precision. Driven by results.</span>
+            <Link
+              href="/admin/login"
+              className="text-white/20 hover:text-white/40 transition-colors"
+            >
+              Admin
+            </Link>
+          </div>
         </div>
       </div>
     </footer>
