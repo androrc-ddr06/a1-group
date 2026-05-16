@@ -61,7 +61,7 @@ async function getClientData() {
 
   const { data: contract } = await admin
     .from("contracts")
-    .select("id, contract_status, contract_html_url, payment_split")
+    .select("id, contract_status, contract_html_url, payment_split, client_feedback")
     .eq("client_id", resolvedClient.id)
     .order("created_at", { ascending: false })
     .limit(1)
@@ -103,19 +103,31 @@ export default async function ClientDashboard() {
 
   const { client, project, updates, hasOnboarded, contract, hasPaid } = data;
 
-  // No contract or still a draft — show holding page
-  if (!contract || contract.contract_status === "draft") {
+  // No contract, draft, or changes_requested — show holding page
+  if (!contract || contract.contract_status === "draft" || contract.contract_status === "changes_requested") {
     const firstName = client.name.split(" ")[0];
+    const isChangesRequested = contract?.contract_status === "changes_requested";
     return (
       <div className="min-h-screen bg-[#0a1628] flex items-center justify-center px-6">
         <div className="text-center max-w-md">
           <div className="w-16 h-16 rounded-full bg-[#c9a84c]/10 border border-[#c9a84c]/20 flex items-center justify-center mx-auto mb-6">
             <FileText size={28} className="text-[#c9a84c]" />
           </div>
-          <h1 className="text-2xl font-extrabold text-white mb-3">Hi {firstName}, you&apos;re almost in!</h1>
-          <p className="text-white/50 text-sm leading-relaxed">
-            Alejandro is reviewing your details and preparing your service agreement. You&apos;ll get an email once it&apos;s ready to sign.
-          </p>
+          {isChangesRequested ? (
+            <>
+              <h1 className="text-2xl font-extrabold text-white mb-3">Revision in Progress</h1>
+              <p className="text-white/50 text-sm leading-relaxed">
+                Your feedback has been received. Alejandro is preparing a revised contract for you. You&apos;ll get an email once it&apos;s ready to review.
+              </p>
+            </>
+          ) : (
+            <>
+              <h1 className="text-2xl font-extrabold text-white mb-3">Hi {firstName}, you&apos;re almost in!</h1>
+              <p className="text-white/50 text-sm leading-relaxed">
+                Alejandro is reviewing your details and preparing your service agreement. You&apos;ll get an email once it&apos;s ready to sign.
+              </p>
+            </>
+          )}
           <p className="text-white/25 text-xs mt-6">Questions? <a href="/#contact" className="text-[#c9a84c] hover:underline">Contact A1 Group</a></p>
         </div>
       </div>

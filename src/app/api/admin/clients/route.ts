@@ -12,7 +12,7 @@ export async function GET(req: NextRequest) {
   const supabase = createServerClient();
   const { data: clients, error } = await supabase
     .from("clients")
-    .select("*, projects(*), onboarding_responses(id, ai_brief_status, ai_brief_url, submitted_at), contracts(id, contract_status, contract_html_url, total_amount, created_at)")
+    .select("*, projects(*), onboarding_responses(id, ai_brief_status, ai_brief_url, submitted_at), contracts(id, contract_status, contract_html_url, total_amount, created_at, client_feedback)")
     .order("created_at", { ascending: false });
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });

@@ -9,14 +9,14 @@ export async function GET() {
   const admin = createServerClient();
   const { data: client } = await admin
     .from("clients")
-    .select("id, services, service_timeline, contracts(id, contract_status, contract_html_url, payment_split), payments(id, status, payment_type)")
+    .select("id, services, service_timeline, contracts(id, contract_status, contract_html_url, payment_split, client_feedback), payments(id, status, payment_type)")
     .eq("auth_user_id", user.id)
     .single();
 
   const resolved = client ?? await (async () => {
     const { data } = await admin
       .from("clients")
-      .select("id, services, service_timeline, contracts(id, contract_status, contract_html_url, payment_split), payments(id, status, payment_type)")
+      .select("id, services, service_timeline, contracts(id, contract_status, contract_html_url, payment_split, client_feedback), payments(id, status, payment_type)")
       .eq("email", user.email)
       .single();
     return data;

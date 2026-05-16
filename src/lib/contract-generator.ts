@@ -9,12 +9,13 @@ export async function generateAndSaveContract(
   claude: Anthropic,
   onboarding: OnboardingData,
   client: ClientData | null,
-  onboarding_id: string
+  onboarding_id: string,
+  adminFeedback?: string
 ): Promise<{ contractUrl: string; totalCents: number; paymentSplit: Record<string, number> }> {
   const response = await claude.messages.create({
     model: "claude-opus-4-7",
     max_tokens: 6000,
-    messages: [{ role: "user", content: buildContractPrompt(onboarding, client) }],
+    messages: [{ role: "user", content: buildContractPrompt(onboarding, client, adminFeedback) }],
   });
 
   const rawContent = response.content[0].type === "text" ? response.content[0].text : "";
@@ -65,7 +66,7 @@ export async function generateAndSaveContract(
   };
 }
 
-function buildContractPrompt(onboarding: OnboardingData, client: ClientData | null): string {
+function buildContractPrompt(onboarding: OnboardingData, client: ClientData | null, adminFeedback?: string): string {
   const services = (client?.services as string[] ?? []).join(", ");
   const contractMonths = client?.contract_months ?? 1;
   const adminNotes = client?.admin_notes as string ?? "";
@@ -127,7 +128,12 @@ Where:
 - monthly_cents = total recurring per month (for month 2 onward)
 All amounts in USD cents (e.g. $1,500.00 = 150000).
 
-Write in formal but clear legal language. Use "A1 Group" as the Contractor throughout.`;
+Write in formal but clear legal language. Use "A1 Group" as the Contractor throughout.${adminFeedback ? `
+
+=== REVISION FEEDBACK FROM ALEJANDRO ===
+${adminFeedback}
+
+Please revise the contract accordingly while keeping all other terms.` : ""}`;
 }
 
 function parseContractAmounts(content: string): {
@@ -174,7 +180,37 @@ function buildFormSummary(onboarding: OnboardingData, client: ClientData | null)
   return lines.filter(Boolean).join("\n");
 }
 
-function generateContractHTML(content: string, client: ClientData | null): string {
+export async function regenerateContractFromText(
+  supabase: SupabaseClient,
+  contractId: string,
+  onboarding_id: string,
+  newMarkdown: string,
+  client: ClientData | null
+): Promise<{ contractUrl: string }> {
+  const contractHtml = generateContractHTML(newMarkdown, client);
+
+  const fileName = `contracts/${onboarding_id}.html`;
+  await supabase.storage
+    .from("client-assets")
+    .upload(fileName, Buffer.from(contractHtml, "utf-8"), {
+      contentType: "text/html; charset=utf-8",
+      upsert: true,
+    });
+
+  const { data: urlData } = supabase.storage.from("client-assets").getPublicUrl(fileName);
+  const contractUrl = urlData.publicUrl;
+
+  const { error } = await supabase
+    .from("contracts")
+    .update({ contract_html_url: contractUrl })
+    .eq("id", contractId);
+
+  if (error) throw new Error(`Contract update failed: ${error.message}`);
+
+  return { contractUrl };
+}
+
+export function generateContractHTML(content: string, client: ClientData | null): string {
   const html = content
     .replace(/^# (.+)$/gm, "<h1>$1</h1>")
     .replace(/^## (.+)$/gm, "<h2>$1</h2>")

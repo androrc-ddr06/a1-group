@@ -31,10 +31,11 @@ type Project = {
 
 type Contract = {
   id: string;
-  contract_status: "draft" | "approved" | "signed";
+  contract_status: "draft" | "approved" | "signed" | "changes_requested";
   contract_html_url: string | null;
   total_amount: number;
   created_at: string;
+  client_feedback?: string | null;
 };
 
 type Client = {
@@ -70,6 +71,7 @@ const contractStatusColors: Record<string, string> = {
   draft: "bg-white/10 text-white/40",
   approved: "bg-blue-500/15 text-blue-400",
   signed: "bg-emerald-500/15 text-emerald-400",
+  changes_requested: "bg-amber-500/15 text-amber-400",
 };
 
 export default function AdminClients() {
@@ -81,6 +83,14 @@ export default function AdminClients() {
   const [expanded, setExpanded] = useState<string | null>(null);
   const [newCode, setNewCode] = useState(generateCode);
   const [addError, setAddError] = useState("");
+
+  const [declineModal, setDeclineModal] = useState<{ contractId: string; clientName: string } | null>(null);
+  const [declineFeedback, setDeclineFeedback] = useState("");
+  const [declining, setDeclining] = useState(false);
+  const [editModal, setEditModal] = useState<{ contractId: string; contractUrl: string; clientName: string } | null>(null);
+  const [editContent, setEditContent] = useState("");
+  const [editLoading, setEditLoading] = useState(false);
+  const [editSaving, setEditSaving] = useState(false);
 
   const [newClient, setNewClient] = useState({
     name: "", company: "", email: "", notes: "",
@@ -174,6 +184,62 @@ export default function AdminClients() {
       headers,
       body: JSON.stringify({ client_id: clientId }),
     });
+    fetchClients();
+  }
+
+  async function loadContractText(url: string): Promise<string> {
+    const res = await fetch(url);
+    const html = await res.text();
+    const contentMatch = html.match(/<div class="content">([\s\S]*?)<div class="signature-block">/);
+    const raw = contentMatch ? contentMatch[1] : html;
+    return raw
+      .replace(/<h1>/g, "# ").replace(/<\/h1>/g, "\n")
+      .replace(/<h2>/g, "## ").replace(/<\/h2>/g, "\n")
+      .replace(/<h3>/g, "### ").replace(/<\/h3>/g, "\n")
+      .replace(/<strong>/g, "**").replace(/<\/strong>/g, "**")
+      .replace(/<li>/g, "- ").replace(/<\/li>/g, "\n")
+      .replace(/<\/?(ul|ol|p|div)[^>]*>/g, "\n")
+      .replace(/&amp;/g, "&").replace(/&lt;/g, "<").replace(/&gt;/g, ">")
+      .replace(/\n{3,}/g, "\n\n").trim();
+  }
+
+  async function openEditModal(contract: Contract, clientName: string) {
+    setEditModal({ contractId: contract.id, contractUrl: contract.contract_html_url!, clientName });
+    setEditLoading(true);
+    const text = await loadContractText(contract.contract_html_url!);
+    setEditContent(text);
+    setEditLoading(false);
+  }
+
+  async function handleDecline() {
+    if (!declineModal || !declineFeedback.trim()) return;
+    setDeclining(true);
+    await fetch("/api/admin/contracts", {
+      method: "PATCH",
+      headers,
+      body: JSON.stringify({ contract_id: declineModal.contractId, action: "decline", feedback: declineFeedback.trim() }),
+    });
+    setDeclining(false);
+    setDeclineModal(null);
+    setDeclineFeedback("");
+    fetchClients();
+  }
+
+  async function handleEditSave(approveAfter: boolean) {
+    if (!editModal) return;
+    setEditSaving(true);
+    await fetch("/api/admin/contracts", {
+      method: "PATCH",
+      headers,
+      body: JSON.stringify({
+        contract_id: editModal.contractId,
+        action: approveAfter ? "edit_and_approve" : "save_draft",
+        new_content: editContent,
+      }),
+    });
+    setEditSaving(false);
+    setEditModal(null);
+    setEditContent("");
     fetchClients();
   }
 
@@ -370,6 +436,103 @@ export default function AdminClients() {
           </div>
         )}
 
+        {/* Decline modal */}
+        {declineModal && (
+          <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center px-6">
+            <div className="bg-[#0f2040] border border-white/15 rounded-2xl p-8 w-full max-w-md">
+              <h2 className="text-white font-bold text-lg mb-2">Decline Contract</h2>
+              <p className="text-white/40 text-sm mb-5">
+                Provide feedback for <span className="text-white">{declineModal.clientName}</span>. The AI will immediately regenerate a revised contract using your notes.
+              </p>
+              <textarea
+                rows={5}
+                value={declineFeedback}
+                onChange={(e) => setDeclineFeedback(e.target.value)}
+                placeholder="e.g. Reduce the website price to $1,200. Remove the branding section. Extend the timeline by 2 weeks..."
+                className="w-full bg-white/5 border border-white/15 rounded-xl px-4 py-3 text-white placeholder:text-white/25 text-sm focus:outline-none focus:border-[#c9a84c]/60 transition-all resize-none mb-5"
+                autoFocus
+              />
+              <div className="flex gap-3">
+                <button
+                  onClick={() => { setDeclineModal(null); setDeclineFeedback(""); }}
+                  disabled={declining}
+                  className="flex-1 py-3 rounded-full border border-white/15 text-white/50 hover:text-white text-sm font-medium transition-colors disabled:opacity-40"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleDecline}
+                  disabled={declining || !declineFeedback.trim()}
+                  className="flex-1 flex items-center justify-center gap-2 bg-red-500/20 hover:bg-red-500/30 text-red-400 font-bold text-sm py-3 rounded-full transition-all disabled:opacity-40 disabled:cursor-not-allowed"
+                >
+                  {declining
+                    ? <><RefreshCw size={13} className="animate-spin" /> Regenerating...</>
+                    : "Decline & Regenerate →"
+                  }
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Edit modal */}
+        {editModal && (
+          <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex flex-col">
+            <div className="bg-[#0f2040] border-b border-white/15 px-6 py-4 flex items-center justify-between flex-shrink-0">
+              <div>
+                <h2 className="text-white font-bold text-base">Edit Contract</h2>
+                <p className="text-white/40 text-xs mt-0.5">{editModal.clientName} — use markdown formatting</p>
+              </div>
+              <div className="flex items-center gap-4">
+                <a
+                  href={`/admin/brief?url=${encodeURIComponent(editModal.contractUrl)}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-white/40 hover:text-white/70 text-xs flex items-center gap-1.5 transition-colors"
+                >
+                  <ExternalLink size={12} /> Preview Current
+                </a>
+                <button
+                  onClick={() => { setEditModal(null); setEditContent(""); }}
+                  className="text-white/30 hover:text-white/70 text-sm transition-colors"
+                >
+                  ✕ Close
+                </button>
+              </div>
+            </div>
+            <div className="flex-1 overflow-hidden p-6">
+              {editLoading ? (
+                <div className="h-full flex items-center justify-center">
+                  <RefreshCw size={24} className="text-white/30 animate-spin" />
+                </div>
+              ) : (
+                <textarea
+                  value={editContent}
+                  onChange={(e) => setEditContent(e.target.value)}
+                  className="w-full h-full bg-white/5 border border-white/15 rounded-xl px-5 py-4 text-white/90 text-sm font-mono leading-relaxed focus:outline-none focus:border-[#c9a84c]/60 transition-all resize-none"
+                  placeholder="Contract content in markdown..."
+                />
+              )}
+            </div>
+            <div className="bg-[#0f2040] border-t border-white/15 px-6 py-4 flex items-center gap-3 flex-shrink-0">
+              <button
+                onClick={() => handleEditSave(false)}
+                disabled={editSaving || editLoading}
+                className="px-6 py-3 rounded-full border border-white/20 text-white/70 hover:text-white text-sm font-medium transition-colors disabled:opacity-40"
+              >
+                {editSaving ? "Saving..." : "Save Draft"}
+              </button>
+              <button
+                onClick={() => handleEditSave(true)}
+                disabled={editSaving || editLoading}
+                className="flex-1 bg-blue-500/20 hover:bg-blue-500/30 text-blue-400 font-bold text-sm py-3 rounded-full transition-all disabled:opacity-40"
+              >
+                {editSaving ? "Saving..." : "Approve & Send →"}
+              </button>
+            </div>
+          </div>
+        )}
+
         {/* Client list */}
         {loading ? (
           <div className="text-white/30 text-sm text-center py-20">Loading clients...</div>
@@ -423,24 +586,43 @@ export default function AdminClients() {
                       {/* Contract controls */}
                       {client.contracts?.[0] && (() => {
                         const contract = client.contracts[0];
+                        const isDraftLike = contract.contract_status === "draft" || contract.contract_status === "changes_requested";
                         return (
-                          <div className="flex items-center gap-2">
-                            <span className={`text-xs font-semibold px-3 py-1 rounded-full capitalize ${contractStatusColors[contract.contract_status] ?? "bg-white/10 text-white/40"}`}>
-                              Contract: {contract.contract_status}
-                            </span>
-                            {contract.contract_html_url && (
-                              <a href={`/admin/brief?url=${encodeURIComponent(contract.contract_html_url)}`} target="_blank" rel="noopener noreferrer" className="text-white/40 hover:text-white/70 transition-colors" title="View Contract">
-                                <FileText size={14} />
-                              </a>
-                            )}
-                            {contract.contract_status === "draft" && (
-                              <>
+                          <div className="flex flex-col gap-2">
+                            <div className="flex items-center gap-2 flex-wrap">
+                              <span className={`text-xs font-semibold px-3 py-1 rounded-full capitalize ${contractStatusColors[contract.contract_status] ?? "bg-white/10 text-white/40"}`}>
+                                Contract: {contract.contract_status.replace("_", " ")}
+                              </span>
+                              {contract.contract_html_url && (
+                                <a href={`/admin/brief?url=${encodeURIComponent(contract.contract_html_url)}`} target="_blank" rel="noopener noreferrer" className="text-white/40 hover:text-white/70 transition-colors" title="View Contract">
+                                  <FileText size={14} />
+                                </a>
+                              )}
+                              {contract.contract_status === "draft" && (
                                 <button
                                   onClick={() => handleApproveContract(contract.id)}
                                   className="text-xs bg-blue-500/20 hover:bg-blue-500/30 text-blue-400 font-semibold px-3 py-1 rounded-full transition-all"
                                 >
                                   Approve
                                 </button>
+                              )}
+                              {isDraftLike && contract.contract_html_url && (
+                                <button
+                                  onClick={() => openEditModal(contract, client.name)}
+                                  className="text-xs bg-white/10 hover:bg-white/20 text-white/60 font-semibold px-3 py-1 rounded-full transition-all"
+                                >
+                                  Edit
+                                </button>
+                              )}
+                              {isDraftLike && (
+                                <button
+                                  onClick={() => setDeclineModal({ contractId: contract.id, clientName: client.name })}
+                                  className="text-xs bg-red-500/10 hover:bg-red-500/20 text-red-400/80 font-semibold px-3 py-1 rounded-full transition-all"
+                                >
+                                  Decline
+                                </button>
+                              )}
+                              {contract.contract_status === "draft" && (
                                 <button
                                   onClick={() => handleRegenerateContract(client.id)}
                                   className="text-white/30 hover:text-white/70 transition-colors"
@@ -448,7 +630,13 @@ export default function AdminClients() {
                                 >
                                   <RefreshCw size={13} />
                                 </button>
-                              </>
+                              )}
+                            </div>
+                            {contract.contract_status === "changes_requested" && contract.client_feedback && (
+                              <div className="bg-amber-500/10 border border-amber-500/20 rounded-xl px-3 py-2 max-w-sm">
+                                <p className="text-amber-400 text-xs font-semibold mb-0.5">Client Feedback</p>
+                                <p className="text-amber-300/80 text-xs leading-relaxed">{contract.client_feedback}</p>
+                              </div>
                             )}
                           </div>
                         );
