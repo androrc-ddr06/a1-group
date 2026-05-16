@@ -92,8 +92,8 @@ Be specific, actionable, and professional. Use real marketing tactics and indust
     const fileName = `briefs/${onboarding_id}.html`;
     const { error: uploadError } = await supabase.storage
       .from("client-assets")
-      .upload(fileName, Buffer.from(pdfHtml), {
-        contentType: "text/html",
+      .upload(fileName, Buffer.from(pdfHtml, "utf-8"), {
+        contentType: "text/html; charset=utf-8",
         upsert: true,
       });
 
@@ -138,7 +138,7 @@ Be specific, actionable, and professional. Use real marketing tactics and indust
               <li>10 kickoff call questions</li>
               <li>Quick wins for the first 30 days</li>
             </ul>
-            <a href="${briefUrl}" style="display: inline-block; margin-top: 16px; background: #c9a84c; color: #0a1628; font-weight: bold; padding: 12px 24px; border-radius: 999px; text-decoration: none; font-size: 14px;">View Strategy Brief →</a>
+            <a href="https://a1group.it.com/admin/brief?url=${encodeURIComponent(briefUrl)}" style="display: inline-block; margin-top: 16px; background: #c9a84c; color: #0a1628; font-weight: bold; padding: 12px 24px; border-radius: 999px; text-decoration: none; font-size: 14px;">View Strategy Brief →</a>
             <p style="margin-top: 16px;">
               <a href="https://a1group.it.com/admin/clients" style="color: #c9a84c; font-size: 13px;">Open Admin Panel</a>
             </p>

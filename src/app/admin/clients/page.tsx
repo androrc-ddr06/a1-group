@@ -368,7 +368,7 @@ export default function AdminClients() {
                             Brief: {latestBrief.ai_brief_status}
                           </span>
                           {latestBrief.ai_brief_status === "ready" && latestBrief.ai_brief_url && (
-                            <a href={latestBrief.ai_brief_url} target="_blank" rel="noopener noreferrer" className="text-[#c9a84c] hover:text-[#d4af61] transition-colors" title="View Brief">
+                            <a href={`/admin/brief?url=${encodeURIComponent(latestBrief.ai_brief_url)}`} target="_blank" rel="noopener noreferrer" className="text-[#c9a84c] hover:text-[#d4af61] transition-colors" title="View Brief">
                               <FileText size={14} />
                             </a>
                           )}
