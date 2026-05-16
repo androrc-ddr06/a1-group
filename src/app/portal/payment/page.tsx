@@ -31,7 +31,7 @@ function PaymentContent() {
         const verifyRes = await fetch(`/api/portal/payment?session_id=${sessionId}`);
         const verifyData = await verifyRes.json();
         if (verifyData.paid) {
-          router.replace("/portal/dashboard");
+          window.location.href = "/portal/dashboard";
           return;
         }
         setVerifying(false);
@@ -48,7 +48,7 @@ function PaymentContent() {
       const payments = data.payments ?? [];
       const paid = payments.find((p: { status: string }) => p.status === "paid");
       if (paid) {
-        router.replace("/portal/dashboard");
+        window.location.href = "/portal/dashboard";
         return;
       }
 
