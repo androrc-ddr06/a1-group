@@ -59,7 +59,30 @@ async function getClientData() {
     .limit(1)
     .single();
 
-  return { client: resolvedClient, project, updates: updates ?? [], hasOnboarded: !!onboarding };
+  const { data: contract } = await admin
+    .from("contracts")
+    .select("id, contract_status, contract_html_url, payment_split")
+    .eq("client_id", resolvedClient.id)
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .single();
+
+  const { data: paidPayment } = await admin
+    .from("payments")
+    .select("id, status")
+    .eq("client_id", resolvedClient.id)
+    .eq("status", "paid")
+    .limit(1)
+    .single();
+
+  return {
+    client: resolvedClient,
+    project,
+    updates: updates ?? [],
+    hasOnboarded: !!onboarding,
+    contract: contract ?? null,
+    hasPaid: !!paidPayment,
+  };
 }
 
 function formatDate(dateStr: string | null | undefined) {
@@ -78,11 +101,42 @@ export default async function ClientDashboard() {
     redirect("/portal/login");
   }
 
-  const { client, project, updates, hasOnboarded } = data;
+  const { client, project, updates, hasOnboarded, contract, hasPaid } = data;
 
+  // No contract or still a draft — show holding page
+  if (!contract || contract.contract_status === "draft") {
+    const firstName = client.name.split(" ")[0];
+    return (
+      <div className="min-h-screen bg-[#0a1628] flex items-center justify-center px-6">
+        <div className="text-center max-w-md">
+          <div className="w-16 h-16 rounded-full bg-[#c9a84c]/10 border border-[#c9a84c]/20 flex items-center justify-center mx-auto mb-6">
+            <FileText size={28} className="text-[#c9a84c]" />
+          </div>
+          <h1 className="text-2xl font-extrabold text-white mb-3">Hi {firstName}, you&apos;re almost in!</h1>
+          <p className="text-white/50 text-sm leading-relaxed">
+            Alejandro is reviewing your details and preparing your service agreement. You&apos;ll get an email once it&apos;s ready to sign.
+          </p>
+          <p className="text-white/25 text-xs mt-6">Questions? <a href="/#contact" className="text-[#c9a84c] hover:underline">Contact A1 Group</a></p>
+        </div>
+      </div>
+    );
+  }
+
+  // Contract approved but not signed
+  if (contract.contract_status === "approved") {
+    redirect("/portal/contract");
+  }
+
+  // Signed but not paid
+  if (contract.contract_status === "signed" && !hasPaid) {
+    redirect("/portal/payment");
+  }
+
+  // Paid but no onboarding yet
   if (!hasOnboarded) {
     redirect("/portal/onboarding");
   }
+
   const firstName = client.name.split(" ")[0];
 
   return (

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createServerClient } from "@/lib/supabase-server";
 import { createClaudeClient } from "@/lib/claude";
+import { generateAndSaveContract } from "@/lib/contract-generator";
 import { Resend } from "resend";
 
 export const maxDuration = 300;
@@ -14,7 +15,7 @@ export async function POST(req: NextRequest) {
   // Fetch onboarding data + client info
   const { data: onboarding } = await supabase
     .from("onboarding_responses")
-    .select("*, clients(name, company, services, service_timeline, contract_months)")
+    .select("*, clients(name, company, services, service_timeline, contract_months, admin_notes)")
     .eq("id", onboarding_id)
     .single();
 
@@ -113,6 +114,13 @@ Be specific, actionable, and professional. Use real marketing tactics and indust
         ai_brief_status: "ready",
       })
       .eq("id", onboarding_id);
+
+    // Generate contract draft alongside brief
+    try {
+      await generateAndSaveContract(supabase, claude, onboarding, client, onboarding_id);
+    } catch (_) {
+      // Don't fail the whole request if contract generation fails
+    }
 
     // Email Alejandro
     try {

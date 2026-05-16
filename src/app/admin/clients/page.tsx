@@ -29,6 +29,14 @@ type Project = {
   status: string;
 };
 
+type Contract = {
+  id: string;
+  contract_status: "draft" | "approved" | "signed";
+  contract_html_url: string | null;
+  total_amount: number;
+  created_at: string;
+};
+
 type Client = {
   id: string;
   name: string;
@@ -42,6 +50,7 @@ type Client = {
   created_at: string;
   projects: Project[];
   onboarding_responses: OnboardingResponse[];
+  contracts: Contract[];
 };
 
 const statusColors: Record<Client["status"], string> = {
@@ -57,6 +66,12 @@ const briefStatusColors: Record<string, string> = {
   failed: "bg-red-500/15 text-red-400",
 };
 
+const contractStatusColors: Record<string, string> = {
+  draft: "bg-white/10 text-white/40",
+  approved: "bg-blue-500/15 text-blue-400",
+  signed: "bg-emerald-500/15 text-emerald-400",
+};
+
 export default function AdminClients() {
   const [clients, setClients] = useState<Client[]>([]);
   const [loading, setLoading] = useState(true);
@@ -68,7 +83,7 @@ export default function AdminClients() {
   const [addError, setAddError] = useState("");
 
   const [newClient, setNewClient] = useState({
-    name: "", company: "", email: "",
+    name: "", company: "", email: "", notes: "",
     services: [] as string[],
     contract_months: 3,
   });
@@ -133,13 +148,32 @@ export default function AdminClients() {
         services: newClient.services,
         service_timeline: timeline,
         contract_months: newClient.contract_months,
+        admin_notes: newClient.notes,
       }),
     });
     const data = await res.json();
     if (!res.ok) { setAddError(data.error || "Failed to create client."); return; }
     setShowNew(false);
-    setNewClient({ name: "", company: "", email: "", services: [], contract_months: 3 });
+    setNewClient({ name: "", company: "", email: "", notes: "", services: [], contract_months: 3 });
     setTimeline([]);
+    fetchClients();
+  }
+
+  async function handleApproveContract(contractId: string) {
+    await fetch("/api/admin/contracts", {
+      method: "PATCH",
+      headers,
+      body: JSON.stringify({ contract_id: contractId, action: "approve" }),
+    });
+    fetchClients();
+  }
+
+  async function handleRegenerateContract(clientId: string) {
+    await fetch("/api/admin/contracts/regenerate", {
+      method: "POST",
+      headers,
+      body: JSON.stringify({ client_id: clientId }),
+    });
     fetchClients();
   }
 
@@ -220,6 +254,18 @@ export default function AdminClients() {
                     />
                   </div>
                 ))}
+
+                {/* Admin Notes */}
+                <div>
+                  <label className="text-white/50 text-xs uppercase tracking-wide block mb-1.5">Admin Notes <span className="text-white/20 normal-case font-normal">(context for AI brief & contract)</span></label>
+                  <textarea
+                    rows={3}
+                    value={newClient.notes}
+                    onChange={(e) => setNewClient((p) => ({ ...p, notes: e.target.value }))}
+                    placeholder="e.g. Client wants luxury feel, discussed $1,500 website, needs booking system, tight 3-week deadline..."
+                    className="w-full bg-white/5 border border-white/15 rounded-xl px-4 py-3 text-white placeholder:text-white/25 text-sm focus:outline-none focus:border-[#c9a84c]/60 transition-all resize-none"
+                  />
+                </div>
 
                 {/* Contract length */}
                 <div>
@@ -374,6 +420,39 @@ export default function AdminClients() {
                           )}
                         </div>
                       )}
+                      {/* Contract controls */}
+                      {client.contracts?.[0] && (() => {
+                        const contract = client.contracts[0];
+                        return (
+                          <div className="flex items-center gap-2">
+                            <span className={`text-xs font-semibold px-3 py-1 rounded-full capitalize ${contractStatusColors[contract.contract_status] ?? "bg-white/10 text-white/40"}`}>
+                              Contract: {contract.contract_status}
+                            </span>
+                            {contract.contract_html_url && (
+                              <a href={`/admin/brief?url=${encodeURIComponent(contract.contract_html_url)}`} target="_blank" rel="noopener noreferrer" className="text-white/40 hover:text-white/70 transition-colors" title="View Contract">
+                                <FileText size={14} />
+                              </a>
+                            )}
+                            {contract.contract_status === "draft" && (
+                              <>
+                                <button
+                                  onClick={() => handleApproveContract(contract.id)}
+                                  className="text-xs bg-blue-500/20 hover:bg-blue-500/30 text-blue-400 font-semibold px-3 py-1 rounded-full transition-all"
+                                >
+                                  Approve
+                                </button>
+                                <button
+                                  onClick={() => handleRegenerateContract(client.id)}
+                                  className="text-white/30 hover:text-white/70 transition-colors"
+                                  title="Regenerate contract"
+                                >
+                                  <RefreshCw size={13} />
+                                </button>
+                              </>
+                            )}
+                          </div>
+                        );
+                      })()}
                       <button onClick={() => setExpanded(isExpanded ? null : client.id)} className="text-white/30 hover:text-white/60 transition-colors ml-1">
                         {isExpanded ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
                       </button>
