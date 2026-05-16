@@ -560,7 +560,7 @@ export default function AdminClients() {
                       </div>
                     </div>
 
-                    {/* Status + code + brief */}
+                    {/* Status + code + brief + expand */}
                     <div className="flex items-center gap-3 flex-wrap flex-shrink-0">
                       <span className={`text-xs font-semibold px-3 py-1 rounded-full capitalize ${statusColors[client.status]}`}>
                         {client.status}
@@ -583,69 +583,70 @@ export default function AdminClients() {
                           )}
                         </div>
                       )}
-                      {/* Contract controls */}
-                      {client.contracts?.[0] && (() => {
-                        const contract = client.contracts[0];
-                        const isDraftLike = contract.contract_status === "draft" || contract.contract_status === "changes_requested";
-                        return (
-                          <div className="flex flex-col gap-2">
-                            <div className="flex items-center gap-2 flex-wrap">
-                              <span className={`text-xs font-semibold px-3 py-1 rounded-full capitalize ${contractStatusColors[contract.contract_status] ?? "bg-white/10 text-white/40"}`}>
-                                Contract: {contract.contract_status.replace("_", " ")}
-                              </span>
-                              {contract.contract_html_url && (
-                                <a href={`/admin/brief?url=${encodeURIComponent(contract.contract_html_url)}`} target="_blank" rel="noopener noreferrer" className="text-white/40 hover:text-white/70 transition-colors" title="View Contract">
-                                  <FileText size={14} />
-                                </a>
-                              )}
-                              {contract.contract_status === "draft" && (
-                                <button
-                                  onClick={() => handleApproveContract(contract.id)}
-                                  className="text-xs bg-blue-500/20 hover:bg-blue-500/30 text-blue-400 font-semibold px-3 py-1 rounded-full transition-all"
-                                >
-                                  Approve
-                                </button>
-                              )}
-                              {isDraftLike && contract.contract_html_url && (
-                                <button
-                                  onClick={() => openEditModal(contract, client.name)}
-                                  className="text-xs bg-white/10 hover:bg-white/20 text-white/60 font-semibold px-3 py-1 rounded-full transition-all"
-                                >
-                                  Edit
-                                </button>
-                              )}
-                              {isDraftLike && (
-                                <button
-                                  onClick={() => setDeclineModal({ contractId: contract.id, clientName: client.name })}
-                                  className="text-xs bg-red-500/10 hover:bg-red-500/20 text-red-400/80 font-semibold px-3 py-1 rounded-full transition-all"
-                                >
-                                  Decline
-                                </button>
-                              )}
-                              {contract.contract_status === "draft" && (
-                                <button
-                                  onClick={() => handleRegenerateContract(client.id)}
-                                  className="text-white/30 hover:text-white/70 transition-colors"
-                                  title="Regenerate contract"
-                                >
-                                  <RefreshCw size={13} />
-                                </button>
-                              )}
-                            </div>
-                            {contract.contract_status === "changes_requested" && contract.client_feedback && (
-                              <div className="bg-amber-500/10 border border-amber-500/20 rounded-xl px-3 py-2 max-w-sm">
-                                <p className="text-amber-400 text-xs font-semibold mb-0.5">Client Feedback</p>
-                                <p className="text-amber-300/80 text-xs leading-relaxed">{contract.client_feedback}</p>
-                              </div>
-                            )}
-                          </div>
-                        );
-                      })()}
                       <button onClick={() => setExpanded(isExpanded ? null : client.id)} className="text-white/30 hover:text-white/60 transition-colors ml-1">
                         {isExpanded ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
                       </button>
                     </div>
                   </div>
+
+                  {/* Contract controls — own row */}
+                  {client.contracts?.[0] && (() => {
+                    const contract = client.contracts[0];
+                    const isDraftLike = contract.contract_status === "draft" || contract.contract_status === "changes_requested";
+                    return (
+                      <div className="mt-4 pt-4 border-t border-white/8 flex flex-col gap-2">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <span className={`text-xs font-semibold px-3 py-1 rounded-full capitalize ${contractStatusColors[contract.contract_status] ?? "bg-white/10 text-white/40"}`}>
+                            Contract: {contract.contract_status.replace("_", " ")}
+                          </span>
+                          {contract.contract_html_url && (
+                            <a href={`/admin/brief?url=${encodeURIComponent(contract.contract_html_url)}`} target="_blank" rel="noopener noreferrer" className="text-white/40 hover:text-white/70 transition-colors" title="View Contract">
+                              <FileText size={14} />
+                            </a>
+                          )}
+                          {contract.contract_status === "draft" && (
+                            <button
+                              onClick={() => handleApproveContract(contract.id)}
+                              className="text-xs bg-blue-500/20 hover:bg-blue-500/30 text-blue-400 font-semibold px-3 py-1 rounded-full transition-all"
+                            >
+                              Approve
+                            </button>
+                          )}
+                          {isDraftLike && contract.contract_html_url && (
+                            <button
+                              onClick={() => openEditModal(contract, client.name)}
+                              className="text-xs bg-white/10 hover:bg-white/20 text-white/60 font-semibold px-3 py-1 rounded-full transition-all"
+                            >
+                              Edit
+                            </button>
+                          )}
+                          {isDraftLike && (
+                            <button
+                              onClick={() => setDeclineModal({ contractId: contract.id, clientName: client.name })}
+                              className="text-xs bg-red-500/10 hover:bg-red-500/20 text-red-400/80 font-semibold px-3 py-1 rounded-full transition-all"
+                            >
+                              Decline
+                            </button>
+                          )}
+                          {contract.contract_status === "draft" && (
+                            <button
+                              onClick={() => handleRegenerateContract(client.id)}
+                              className="text-white/30 hover:text-white/70 transition-colors"
+                              title="Regenerate contract"
+                            >
+                              <RefreshCw size={13} />
+                            </button>
+                          )}
+                        </div>
+                        {contract.contract_status === "changes_requested" && contract.client_feedback && (
+                          <div className="bg-amber-500/10 border border-amber-500/20 rounded-xl px-3 py-2 max-w-sm">
+                            <p className="text-amber-400 text-xs font-semibold mb-0.5">Client Feedback</p>
+                            <p className="text-amber-300/80 text-xs leading-relaxed">{contract.client_feedback}</p>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })()}
 
                   {/* Services tags */}
                   {client.services?.length > 0 && (
