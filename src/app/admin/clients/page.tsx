@@ -84,6 +84,7 @@ export default function AdminClients() {
   const [newCode, setNewCode] = useState(generateCode);
   const [addError, setAddError] = useState("");
 
+  const [draftingContracts, setDraftingContracts] = useState<Set<string>>(new Set());
   const [declineModal, setDeclineModal] = useState<{ contractId: string; clientName: string } | null>(null);
   const [declineFeedback, setDeclineFeedback] = useState("");
   const [declining, setDeclining] = useState(false);
@@ -214,6 +215,7 @@ export default function AdminClients() {
   async function handleDecline() {
     if (!declineModal || !declineFeedback.trim()) return;
     setDeclining(true);
+    const clientId = clients.find(c => c.contracts?.[0]?.id === declineModal.contractId)?.id;
     await fetch("/api/admin/contracts", {
       method: "PATCH",
       headers,
@@ -222,7 +224,9 @@ export default function AdminClients() {
     setDeclining(false);
     setDeclineModal(null);
     setDeclineFeedback("");
-    fetchClients();
+    if (clientId) setDraftingContracts(prev => new Set(prev).add(clientId));
+    await fetchClients();
+    if (clientId) setDraftingContracts(prev => { const s = new Set(prev); s.delete(clientId); return s; });
   }
 
   async function handleEditSave(approveAfter: boolean) {
@@ -440,9 +444,9 @@ export default function AdminClients() {
         {declineModal && (
           <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center px-6">
             <div className="bg-[#0f2040] border border-white/15 rounded-2xl p-8 w-full max-w-md">
-              <h2 className="text-white font-bold text-lg mb-2">Decline Contract</h2>
+              <h2 className="text-white font-bold text-lg mb-2">Revise Contract with AI</h2>
               <p className="text-white/40 text-sm mb-5">
-                Provide feedback for <span className="text-white">{declineModal.clientName}</span>. The AI will immediately regenerate a revised contract using your notes.
+                Describe what to change for <span className="text-white">{declineModal.clientName}</span>. The AI will immediately draft a revised contract using your feedback.
               </p>
               <textarea
                 rows={5}
@@ -466,8 +470,8 @@ export default function AdminClients() {
                   className="flex-1 flex items-center justify-center gap-2 bg-red-500/20 hover:bg-red-500/30 text-red-400 font-bold text-sm py-3 rounded-full transition-all disabled:opacity-40 disabled:cursor-not-allowed"
                 >
                   {declining
-                    ? <><RefreshCw size={13} className="animate-spin" /> Regenerating...</>
-                    : "Decline & Regenerate →"
+                    ? <><RefreshCw size={13} className="animate-spin" /> Submitting...</>
+                    : "Submit & Regenerate →"
                   }
                 </button>
               </div>
@@ -590,7 +594,18 @@ export default function AdminClients() {
                   </div>
 
                   {/* Contract controls — own row */}
-                  {client.contracts?.[0] && (() => {
+                  {(client.contracts?.[0] || draftingContracts.has(client.id)) && (() => {
+                    if (draftingContracts.has(client.id)) {
+                      return (
+                        <div className="mt-4 pt-4 border-t border-white/8 flex items-center gap-2">
+                          <RefreshCw size={13} className="text-[#c9a84c] animate-spin" />
+                          <span className="text-[#c9a84c] text-xs font-semibold">Drafting revised contract...</span>
+                        </div>
+                      );
+                    }
+                    return null;
+                  })()}
+                  {client.contracts?.[0] && !draftingContracts.has(client.id) && (() => {
                     const contract = client.contracts[0];
                     const isDraftLike = contract.contract_status === "draft" || contract.contract_status === "changes_requested";
                     return (
@@ -623,9 +638,9 @@ export default function AdminClients() {
                           {isDraftLike && (
                             <button
                               onClick={() => setDeclineModal({ contractId: contract.id, clientName: client.name })}
-                              className="text-xs bg-red-500/10 hover:bg-red-500/20 text-red-400/80 font-semibold px-3 py-1 rounded-full transition-all"
+                              className="text-xs bg-white/10 hover:bg-white/20 text-white/60 font-semibold px-3 py-1 rounded-full transition-all"
                             >
-                              Decline
+                              Revise with AI
                             </button>
                           )}
                           {contract.contract_status === "draft" && (
