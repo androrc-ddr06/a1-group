@@ -64,7 +64,7 @@ export default function AdminClients() {
   const [showNew, setShowNew] = useState(false);
   const [copied, setCopied] = useState<string | null>(null);
   const [expanded, setExpanded] = useState<string | null>(null);
-  const [newCode] = useState(generateCode);
+  const [newCode, setNewCode] = useState(generateCode);
   const [addError, setAddError] = useState("");
 
   const [newClient, setNewClient] = useState({
@@ -297,9 +297,14 @@ export default function AdminClients() {
                     <div className="text-white/40 text-xs uppercase tracking-wide">Access Code</div>
                     <div className="text-[#c9a84c] font-mono font-bold tracking-widest text-lg mt-0.5">{newCode}</div>
                   </div>
-                  <button onClick={() => copyCode(newCode)} className="text-white/30 hover:text-white/70 transition-colors">
-                    {copied === newCode ? <Check size={16} className="text-emerald-400" /> : <Copy size={16} />}
-                  </button>
+                  <div className="flex items-center gap-3">
+                    <button onClick={() => setNewCode(generateCode())} className="text-white/30 hover:text-white/70 transition-colors" title="Generate new code">
+                      <RefreshCw size={15} />
+                    </button>
+                    <button onClick={() => copyCode(newCode)} className="text-white/30 hover:text-white/70 transition-colors" title="Copy code">
+                      {copied === newCode ? <Check size={16} className="text-emerald-400" /> : <Copy size={16} />}
+                    </button>
+                  </div>
                 </div>
 
                 {addError && (
