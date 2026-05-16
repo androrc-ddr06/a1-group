@@ -52,7 +52,14 @@ async function getClientData() {
     .eq("client_id", resolvedClient.id)
     .order("created_at", { ascending: false });
 
-  return { client: resolvedClient, project, updates: updates ?? [] };
+  const { data: onboarding } = await admin
+    .from("onboarding_responses")
+    .select("id")
+    .eq("client_id", resolvedClient.id)
+    .limit(1)
+    .single();
+
+  return { client: resolvedClient, project, updates: updates ?? [], hasOnboarded: !!onboarding };
 }
 
 function formatDate(dateStr: string | null | undefined) {
@@ -71,7 +78,11 @@ export default async function ClientDashboard() {
     redirect("/portal/login");
   }
 
-  const { client, project, updates } = data;
+  const { client, project, updates, hasOnboarded } = data;
+
+  if (!hasOnboarded) {
+    redirect("/portal/onboarding");
+  }
   const firstName = client.name.split(" ")[0];
 
   return (
