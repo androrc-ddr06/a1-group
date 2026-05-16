@@ -124,7 +124,7 @@ export default function DashboardClient({ firstName, company, project, updates }
             { icon: MessageSquare, label: "Updates", href: "#updates", count: updates.length },
             { icon: FolderOpen, label: "My Assets", href: "/portal/assets", count: null },
             { icon: TrendingUp, label: "Reports", href: "/portal/reports", count: null },
-            { icon: FileText, label: "Onboarding", href: "/portal/onboarding", count: null },
+            { icon: FileText, label: "Onboarding", href: "/portal/onboarding/summary", count: null },
           ].map((item) => (
             <Link
               key={item.label}

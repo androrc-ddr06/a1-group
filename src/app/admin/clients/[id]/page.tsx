@@ -87,6 +87,8 @@ type CallNote = {
   updated_at: string;
 };
 
+type Asset = { label: string; url: string };
+
 type FullClient = {
   id: string;
   name: string;
@@ -98,6 +100,7 @@ type FullClient = {
   service_timeline: { month: number; service: string; status: "active" | "upcoming" }[];
   contract_months: number;
   admin_notes: string | null;
+  assets: Asset[] | null;
   created_at: string;
   projects: Project[];
   onboarding_responses: OnboardingResponse[];
@@ -108,7 +111,7 @@ type FullClient = {
   call_notes: CallNote | null;
 };
 
-type Tab = "overview" | "brief" | "contract" | "checklist";
+type Tab = "overview" | "brief" | "contract" | "checklist" | "assets";
 
 const statusColors: Record<string, string> = {
   active: "bg-emerald-500/15 text-emerald-400",
@@ -163,6 +166,11 @@ export default function ClientDetailPage() {
   const [updateMessage, setUpdateMessage] = useState("");
   const [sendEmail, setSendEmail] = useState(false);
   const [postingUpdate, setPostingUpdate] = useState(false);
+
+  // Assets
+  const [assetLabel, setAssetLabel] = useState("");
+  const [assetUrl, setAssetUrl] = useState("");
+  const [savingAssets, setSavingAssets] = useState(false);
 
   // Contract
   const [isDraftingContract, setIsDraftingContract] = useState(false);
@@ -301,6 +309,35 @@ export default function ClientDetailPage() {
     fetchClient();
   }
 
+  async function handleAddAsset() {
+    if (!assetLabel.trim() || !assetUrl.trim()) return;
+    setSavingAssets(true);
+    const current = client?.assets ?? [];
+    const updated = [...current, { label: assetLabel.trim(), url: assetUrl.trim() }];
+    await fetch(`/api/admin/clients/${id}`, {
+      method: "PATCH",
+      headers,
+      body: JSON.stringify({ assets: updated }),
+    });
+    setAssetLabel("");
+    setAssetUrl("");
+    await fetchClient();
+    setSavingAssets(false);
+  }
+
+  async function handleDeleteAsset(index: number) {
+    setSavingAssets(true);
+    const current = client?.assets ?? [];
+    const updated = current.filter((_, i) => i !== index);
+    await fetch(`/api/admin/clients/${id}`, {
+      method: "PATCH",
+      headers,
+      body: JSON.stringify({ assets: updated }),
+    });
+    await fetchClient();
+    setSavingAssets(false);
+  }
+
   async function loadContractText(url: string): Promise<string> {
     const res = await fetch(url);
     const html = await res.text();
@@ -412,6 +449,7 @@ export default function ClientDetailPage() {
     { key: "brief", label: "Brief & Onboarding" },
     { key: "contract", label: "Contract" },
     { key: "checklist", label: `Checklist${totalTasks > 0 ? ` (${completedTasks}/${totalTasks})` : ""}` },
+    { key: "assets", label: `Assets${(client.assets?.length ?? 0) > 0 ? ` (${client.assets!.length})` : ""}` },
   ];
 
   return (
@@ -966,6 +1004,73 @@ export default function ClientDetailPage() {
                 </div>
               </div>
             )}
+          </div>
+        )}
+
+        {/* ─── ASSETS TAB ─── */}
+        {activeTab === "assets" && (
+          <div className="space-y-6">
+            <div className="bg-[#0a1628] border border-white/10 rounded-2xl p-6">
+              <h3 className="text-white font-bold mb-1">Client Assets</h3>
+              <p className="text-white/30 text-xs mb-6">Files and links that will appear on {client.name.split(" ")[0]}&apos;s portal under &quot;My Assets&quot;.</p>
+
+              {/* Current assets */}
+              {(client.assets ?? []).length === 0 ? (
+                <p className="text-white/25 text-sm text-center py-6">No assets added yet.</p>
+              ) : (
+                <div className="space-y-2 mb-6">
+                  {(client.assets ?? []).map((asset, i) => (
+                    <div key={i} className="flex items-center gap-3 bg-white/5 rounded-xl px-4 py-3">
+                      <div className="flex-1 min-w-0">
+                        <div className="text-white text-sm font-semibold truncate">{asset.label}</div>
+                        <div className="text-white/30 text-xs truncate">{asset.url}</div>
+                      </div>
+                      <a
+                        href={asset.url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-[#c9a84c]/60 hover:text-[#c9a84c] transition-colors flex-shrink-0"
+                      >
+                        <ExternalLink size={13} />
+                      </a>
+                      <button
+                        onClick={() => handleDeleteAsset(i)}
+                        disabled={savingAssets}
+                        className="text-white/15 hover:text-red-400 transition-colors flex-shrink-0 disabled:opacity-40"
+                      >
+                        <Trash2 size={13} />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {/* Add asset */}
+              <div className="flex gap-2 flex-wrap">
+                <input
+                  type="text"
+                  value={assetLabel}
+                  onChange={(e) => setAssetLabel(e.target.value)}
+                  placeholder="Label (e.g. Website Wireframes)"
+                  className="flex-1 min-w-[180px] bg-white/5 border border-white/15 rounded-xl px-4 py-2.5 text-white placeholder:text-white/25 text-sm focus:outline-none focus:border-[#c9a84c]/60 transition-all"
+                />
+                <input
+                  type="url"
+                  value={assetUrl}
+                  onChange={(e) => setAssetUrl(e.target.value)}
+                  onKeyDown={(e) => e.key === "Enter" && handleAddAsset()}
+                  placeholder="URL (Google Drive, Dropbox, etc.)"
+                  className="flex-1 min-w-[200px] bg-white/5 border border-white/15 rounded-xl px-4 py-2.5 text-white placeholder:text-white/25 text-sm focus:outline-none focus:border-[#c9a84c]/60 transition-all"
+                />
+                <button
+                  onClick={handleAddAsset}
+                  disabled={savingAssets || !assetLabel.trim() || !assetUrl.trim()}
+                  className="flex items-center gap-1.5 bg-white/10 hover:bg-white/15 text-white/70 font-semibold text-sm px-4 py-2.5 rounded-xl transition-all disabled:opacity-40"
+                >
+                  <Plus size={14} /> Add
+                </button>
+              </div>
+            </div>
           </div>
         )}
       </div>

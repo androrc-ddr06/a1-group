@@ -91,6 +91,33 @@ Return ONLY a JSON array with no other text, no markdown, no code fences:
     return NextResponse.json({ error: "Failed to parse AI response", raw: rawText }, { status: 500 });
   }
 
+  // Ensure a project row exists for this client (create if missing)
+  const { data: existingProject } = await supabase
+    .from("projects")
+    .select("id")
+    .eq("client_id", id)
+    .limit(1)
+    .single();
+
+  if (!existingProject) {
+    const furthestDate = parsed
+      .map((t) => t.due_date)
+      .filter(Boolean)
+      .sort()
+      .at(-1) ?? null;
+    await supabase.from("projects").insert({
+      client_id: id,
+      name: `${client?.company ?? "Project"} — ${(client?.services ?? []).join(", ") || "Services"}`,
+      progress_percent: 0,
+      days_remaining: furthestDate
+        ? Math.max(0, Math.ceil((new Date(furthestDate).getTime() - Date.now()) / 86400000))
+        : 30,
+      start_date: today,
+      due_date: furthestDate,
+      status: "active",
+    });
+  }
+
   // Delete existing incomplete tasks — preserve completed ones
   await supabase
     .from("client_tasks")
@@ -112,6 +139,28 @@ Return ONLY a JSON array with no other text, no markdown, no code fences:
     .select();
 
   if (insertError) return NextResponse.json({ error: insertError.message }, { status: 500 });
+
+  // Recalculate progress now that tasks exist
+  const total = newTasks.length;
+  const completedCount = newTasks.filter((t) => t.completed).length;
+  const progress = total > 0 ? Math.round((completedCount / total) * 100) : 0;
+  const furthestDue = newTasks
+    .map((t) => t.due_date)
+    .filter(Boolean)
+    .sort()
+    .at(-1) ?? null;
+  const daysRemaining = furthestDue
+    ? Math.max(0, Math.ceil((new Date(furthestDue).getTime() - Date.now()) / 86400000))
+    : null;
+
+  await supabase
+    .from("projects")
+    .update({
+      progress_percent: progress,
+      ...(daysRemaining !== null ? { days_remaining: daysRemaining } : {}),
+      ...(furthestDue ? { due_date: furthestDue } : {}),
+    })
+    .eq("client_id", id);
 
   return NextResponse.json({ tasks: newTasks });
 }
