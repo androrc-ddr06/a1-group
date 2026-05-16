@@ -92,7 +92,7 @@ export async function PATCH(req: NextRequest) {
       contract_id,
       contract.onboarding_id,
       new_content.trim(),
-      contract.clients as Record<string, unknown> | null
+      contract.clients as unknown as Record<string, unknown> | null
     );
 
     if (action === "edit_and_approve") {
