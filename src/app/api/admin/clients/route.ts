@@ -6,26 +6,24 @@ function isAdmin(req: NextRequest) {
   return secret === process.env.ADMIN_SECRET;
 }
 
-// GET /api/admin/clients — list all clients with their active project
 export async function GET(req: NextRequest) {
   if (!isAdmin(req)) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const supabase = createServerClient();
   const { data: clients, error } = await supabase
     .from("clients")
-    .select("*, projects(*)")
+    .select("*, projects(*), onboarding_responses(id, ai_brief_status, ai_brief_url, submitted_at)")
     .order("created_at", { ascending: false });
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
   return NextResponse.json(clients);
 }
 
-// POST /api/admin/clients — create new client with access code
 export async function POST(req: NextRequest) {
   if (!isAdmin(req)) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const body = await req.json();
-  const { name, company, email, access_code } = body;
+  const { name, company, email, access_code, services, service_timeline, contract_months } = body;
 
   if (!name || !email || !access_code) {
     return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
@@ -34,10 +32,39 @@ export async function POST(req: NextRequest) {
   const supabase = createServerClient();
   const { data, error } = await supabase
     .from("clients")
-    .insert({ name, company, email, access_code, status: "pending" })
+    .insert({
+      name,
+      company,
+      email,
+      access_code,
+      status: "pending",
+      services: services ?? [],
+      service_timeline: service_timeline ?? [],
+      contract_months: contract_months ?? 1,
+    })
     .select()
     .single();
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
   return NextResponse.json(data, { status: 201 });
+}
+
+export async function PATCH(req: NextRequest) {
+  if (!isAdmin(req)) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
+  const body = await req.json();
+  const { client_id, services, service_timeline, contract_months } = body;
+
+  if (!client_id) return NextResponse.json({ error: "client_id required" }, { status: 400 });
+
+  const supabase = createServerClient();
+  const { data, error } = await supabase
+    .from("clients")
+    .update({ services, service_timeline, contract_months })
+    .eq("id", client_id)
+    .select()
+    .single();
+
+  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+  return NextResponse.json(data);
 }
