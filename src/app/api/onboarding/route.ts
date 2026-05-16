@@ -1,8 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createServerClient } from "@/lib/supabase-server";
 import { Resend } from "resend";
+import { waitUntil } from "@vercel/functions";
 
-export const maxDuration = 300;
+export const maxDuration = 60;
 
 export async function POST(req: NextRequest) {
   const body = await req.json();
@@ -56,15 +57,15 @@ export async function POST(req: NextRequest) {
     });
   } catch (_) {}
 
-  // Await brief generation — Pro plan gives us 5 min, Opus completes well within that
-  try {
-    const baseUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "https://a1group.it.com";
-    await fetch(`${baseUrl}/api/onboarding/generate-brief`, {
+  // Return success immediately, generate brief in background
+  const baseUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "https://a1group.it.com";
+  waitUntil(
+    fetch(`${baseUrl}/api/onboarding/generate-brief`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ onboarding_id: saved.id }),
-    });
-  } catch (_) {}
+    }).catch(() => {})
+  );
 
   return NextResponse.json({ success: true });
 }
