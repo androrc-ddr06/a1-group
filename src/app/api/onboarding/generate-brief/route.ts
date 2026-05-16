@@ -3,7 +3,7 @@ import { createServerClient } from "@/lib/supabase-server";
 import { createClaudeClient } from "@/lib/claude";
 import { Resend } from "resend";
 
-export const maxDuration = 60;
+export const maxDuration = 300;
 
 export async function POST(req: NextRequest) {
   const { onboarding_id } = await req.json();
@@ -36,8 +36,8 @@ export async function POST(req: NextRequest) {
     const formSummary = buildFormSummary(onboarding, client);
 
     const response = await claude.messages.create({
-      model: "claude-haiku-4-5-20251001",
-      max_tokens: 3000,
+      model: "claude-opus-4-7",
+      max_tokens: 4000,
       messages: [
         {
           role: "user",

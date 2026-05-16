@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { createServerClient } from "@/lib/supabase-server";
 import { Resend } from "resend";
 
+export const maxDuration = 300;
+
 export async function POST(req: NextRequest) {
   const body = await req.json();
   const { client_id, ...formData } = body;
@@ -54,7 +56,7 @@ export async function POST(req: NextRequest) {
     });
   } catch (_) {}
 
-  // Generate brief inline (Haiku is fast enough to complete within 60s)
+  // Await brief generation — Pro plan gives us 5 min, Opus completes well within that
   try {
     const baseUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "https://a1group.it.com";
     await fetch(`${baseUrl}/api/onboarding/generate-brief`, {
