@@ -216,17 +216,47 @@ export default function AdminClients() {
     if (!declineModal || !declineFeedback.trim()) return;
     setDeclining(true);
     const clientId = clients.find(c => c.contracts?.[0]?.id === declineModal.contractId)?.id;
+    const originalContractId = declineModal.contractId;
     await fetch("/api/admin/contracts", {
       method: "PATCH",
       headers,
-      body: JSON.stringify({ contract_id: declineModal.contractId, action: "decline", feedback: declineFeedback.trim() }),
+      body: JSON.stringify({ contract_id: originalContractId, action: "decline", feedback: declineFeedback.trim() }),
     });
     setDeclining(false);
     setDeclineModal(null);
     setDeclineFeedback("");
-    if (clientId) setDraftingContracts(prev => new Set(prev).add(clientId));
-    await fetchClients();
-    if (clientId) setDraftingContracts(prev => { const s = new Set(prev); s.delete(clientId); return s; });
+    if (!clientId) return;
+
+    // Show drafting spinner and poll until a new contract appears (old one gets deleted + replaced)
+    setDraftingContracts(prev => new Set(prev).add(clientId));
+    const poll = async () => {
+      const res = await fetch("/api/admin/clients", { headers });
+      if (!res.ok) return false;
+      const data: Client[] = await res.json();
+      const updatedClient = data.find(c => c.id === clientId);
+      const newContract = updatedClient?.contracts?.[0];
+      // New contract is ready when it's a fresh record (different id from what we declined)
+      if (newContract && newContract.id !== originalContractId) {
+        setClients(data);
+        return true;
+      }
+      return false;
+    };
+
+    const interval = setInterval(async () => {
+      const done = await poll();
+      if (done) {
+        clearInterval(interval);
+        setDraftingContracts(prev => { const s = new Set(prev); s.delete(clientId); return s; });
+      }
+    }, 4000);
+
+    // Safety timeout: stop polling after 3 minutes and refresh anyway
+    setTimeout(() => {
+      clearInterval(interval);
+      setDraftingContracts(prev => { const s = new Set(prev); s.delete(clientId); return s; });
+      fetchClients();
+    }, 180000);
   }
 
   async function handleEditSave(approveAfter: boolean) {
@@ -551,18 +581,18 @@ export default function AdminClients() {
                 <div key={client.id} className="bg-[#0a1628] border border-white/10 rounded-2xl p-6">
                   <div className="flex flex-col lg:flex-row lg:items-center gap-5">
                     {/* Client info */}
-                    <div className="flex items-center gap-4 flex-1">
+                    <Link href={`/admin/clients/${client.id}`} className="flex items-center gap-4 flex-1 group hover:opacity-80 transition-opacity">
                       <div className="w-11 h-11 rounded-full bg-[#1b2e4b] flex items-center justify-center flex-shrink-0">
                         <span className="text-white font-bold text-sm">
                           {client.name.split(" ").map((n) => n[0]).join("")}
                         </span>
                       </div>
                       <div>
-                        <div className="text-white font-semibold">{client.name}</div>
+                        <div className="text-white font-semibold group-hover:text-[#c9a84c] transition-colors">{client.name}</div>
                         <div className="text-white/40 text-sm">{client.company}</div>
                         <div className="text-white/25 text-xs mt-0.5">{client.email}</div>
                       </div>
-                    </div>
+                    </Link>
 
                     {/* Status + code + brief + expand */}
                     <div className="flex items-center gap-3 flex-wrap flex-shrink-0">
