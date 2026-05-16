@@ -1,53 +1,90 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef, useCallback } from "react";
 import { ArrowRight, X } from "lucide-react";
 
 const STORAGE_KEY = "a1_portal_tour_done";
 
-type Step = {
-  headline: string;
-  body: string;
-  tooltipClass: string; // fixed positioning for the tooltip card
-  ringClass: string | null; // ring overlay on target, null = no ring
-};
+type Rect = { top: number; left: number; width: number; height: number };
 
-const STEPS: Step[] = [
+const STEPS = [
   {
-    headline: "Your project, live",
+    id: "progress",
+    headline: "Your project progress",
     body: "This card updates in real time as we complete work on your project. You'll always know exactly where things stand.",
-    tooltipClass: "top-[260px] left-1/2 -translate-x-1/2",
-    ringClass: "top-[120px] left-1/2 -translate-x-1/2 w-full max-w-6xl px-6 h-[120px]",
   },
   {
+    id: "quicklinks",
     headline: "Quick links",
     body: "Jump to your assets, reports, or revisit your onboarding answers any time from these cards.",
-    tooltipClass: "top-[54%] left-1/2 -translate-x-1/2",
-    ringClass: "top-[43%] left-1/2 -translate-x-1/2 w-full max-w-6xl px-6 h-[104px]",
   },
   {
+    id: "updates",
     headline: "Updates from A1 Group",
     body: "We post here every time there's news on your project. You'll get notified as work progresses.",
-    tooltipClass: "bottom-[200px] left-1/2 -translate-x-1/2",
-    ringClass: "bottom-[72px] left-1/2 -translate-x-1/2 w-full max-w-6xl px-6 h-[120px]",
   },
   {
+    id: "done",
     headline: "You're all set",
     body: "That's your portal. We'll take it from here — expect updates as we get to work on your project.",
-    tooltipClass: "top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2",
-    ringClass: null,
   },
 ];
 
-export default function PortalTour() {
+const GAP = 12; // px between ring and tooltip
+
+export function useTourRefs() {
+  const progressRef = useRef<HTMLDivElement>(null);
+  const quicklinksRef = useRef<HTMLDivElement>(null);
+  const updatesRef = useRef<HTMLDivElement>(null);
+  return { progressRef, quicklinksRef, updatesRef };
+}
+
+type TourProps = {
+  progressRef: React.RefObject<HTMLDivElement | null>;
+  quicklinksRef: React.RefObject<HTMLDivElement | null>;
+  updatesRef: React.RefObject<HTMLDivElement | null>;
+};
+
+export default function PortalTour({ progressRef, quicklinksRef, updatesRef }: TourProps) {
   const [visible, setVisible] = useState(false);
   const [step, setStep] = useState(0);
+  const [rect, setRect] = useState<Rect | null>(null);
+
+  const getRef = useCallback((stepId: string) => {
+    if (stepId === "progress") return progressRef.current;
+    if (stepId === "quicklinks") return quicklinksRef.current;
+    if (stepId === "updates") return updatesRef.current;
+    return null;
+  }, [progressRef, quicklinksRef, updatesRef]);
+
+  const measureStep = useCallback((stepIndex: number) => {
+    const el = getRef(STEPS[stepIndex].id);
+    if (!el) { setRect(null); return; }
+    const r = el.getBoundingClientRect();
+    setRect({ top: r.top, left: r.left, width: r.width, height: r.height });
+  }, [getRef]);
 
   useEffect(() => {
     if (!localStorage.getItem(STORAGE_KEY)) {
-      setVisible(true);
+      // Small delay so the page has painted before we measure
+      setTimeout(() => {
+        setVisible(true);
+        measureStep(0);
+      }, 400);
     }
-  }, []);
+  }, [measureStep]);
+
+  useEffect(() => {
+    if (visible) measureStep(step);
+  }, [step, visible, measureStep]);
+
+  // Re-measure on resize
+  useEffect(() => {
+    if (!visible) return;
+    const handler = () => measureStep(step);
+    window.addEventListener("resize", handler);
+    return () => window.removeEventListener("resize", handler);
+  }, [visible, step, measureStep]);
 
   function dismiss() {
     localStorage.setItem(STORAGE_KEY, "1");
@@ -65,22 +102,54 @@ export default function PortalTour() {
   if (!visible) return null;
 
   const current = STEPS[step];
-  const isLast = step === STEPS.length - 1;
+  const isLast = current.id === "done";
+
+  // Tooltip placement: prefer below the target, fall back to above if too close to bottom
+  function getTooltipStyle(): React.CSSProperties {
+    if (!rect || isLast) return {};
+    const viewportH = window.innerHeight;
+    const below = rect.top + rect.height + GAP;
+    const above = rect.top - GAP - 200; // approx tooltip height
+    const useBelow = below + 220 < viewportH || rect.top < viewportH / 2;
+    const top = useBelow ? below : Math.max(8, above);
+    // Center the tooltip over the target, clamped to viewport
+    const tooltipW = Math.min(384, window.innerWidth - 32);
+    const left = Math.max(16, Math.min(
+      rect.left + rect.width / 2 - tooltipW / 2,
+      window.innerWidth - tooltipW - 16
+    ));
+    return { position: "fixed", top, left, width: tooltipW };
+  }
 
   return (
-    <div className="fixed inset-0 z-50">
-      {/* Backdrop */}
-      <div className="absolute inset-0 bg-black/60" onClick={dismiss} />
+    <div className="fixed inset-0 z-50 pointer-events-none">
+      {/* Full backdrop */}
+      <div className="absolute inset-0 bg-black/60 pointer-events-auto" onClick={dismiss} />
 
-      {/* Spotlight ring */}
-      {current.ringClass && (
-        <div className={`absolute pointer-events-none ${current.ringClass}`}>
-          <div className="w-full h-full rounded-2xl ring-2 ring-[#c9a84c]" />
-        </div>
+      {/* Spotlight cutout — renders a transparent hole over the target */}
+      {rect && !isLast && (
+        <div
+          className="absolute pointer-events-none"
+          style={{
+            top: rect.top - 6,
+            left: rect.left - 6,
+            width: rect.width + 12,
+            height: rect.height + 12,
+            boxShadow: "0 0 0 9999px rgba(0,0,0,0.6)",
+            borderRadius: "16px",
+            border: "2px solid #c9a84c",
+          }}
+        />
       )}
 
-      {/* Tooltip card */}
-      <div className={`absolute pointer-events-auto w-full max-w-sm px-4 ${current.tooltipClass}`}>
+      {/* Tooltip */}
+      <div
+        className="pointer-events-auto"
+        style={isLast
+          ? { position: "fixed", top: "50%", left: "50%", transform: "translate(-50%,-50%)", width: Math.min(384, window.innerWidth - 32) }
+          : getTooltipStyle()
+        }
+      >
         {isLast ? (
           <div className="bg-[#0a1628] border border-white/15 rounded-2xl p-8 shadow-2xl text-center">
             <div className="w-14 h-14 rounded-full bg-[#c9a84c]/15 border border-[#c9a84c]/30 flex items-center justify-center mx-auto mb-5">
