@@ -70,7 +70,7 @@ export default function PortalLogin() {
         return;
       }
 
-      router.push("/portal/onboarding");
+      router.push("/portal/dashboard");
     } else {
       const { error: signInError } = await supabase.auth.signInWithPassword({
         email: form.email,

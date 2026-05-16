@@ -6,10 +6,10 @@ import {
   FileText,
   MessageSquare,
   FolderOpen,
-  LogOut,
   Clock,
 } from "lucide-react";
 import SignOutButton from "./SignOutButton";
+import PortalTour from "./PortalTour";
 
 async function getClientData() {
   const supabase = await createSessionClient();
@@ -52,13 +52,6 @@ async function getClientData() {
     .eq("client_id", resolvedClient.id)
     .order("created_at", { ascending: false });
 
-  const { data: onboarding } = await admin
-    .from("onboarding_responses")
-    .select("id")
-    .eq("client_id", resolvedClient.id)
-    .limit(1)
-    .single();
-
   const { data: contract } = await admin
     .from("contracts")
     .select("id, contract_status, contract_html_url, payment_split, client_feedback")
@@ -79,7 +72,6 @@ async function getClientData() {
     client: resolvedClient,
     project,
     updates: updates ?? [],
-    hasOnboarded: !!onboarding,
     contract: contract ?? null,
     hasPaid: !!paidPayment,
   };
@@ -101,7 +93,7 @@ export default async function ClientDashboard() {
     redirect("/portal/login");
   }
 
-  const { client, project, updates, hasOnboarded, contract, hasPaid } = data;
+  const { client, project, updates, contract, hasPaid } = data;
 
   // No contract, draft, or changes_requested — show holding page
   if (!contract || contract.contract_status === "draft" || contract.contract_status === "changes_requested") {
@@ -142,11 +134,6 @@ export default async function ClientDashboard() {
   // Signed but not paid
   if (contract.contract_status === "signed" && !hasPaid) {
     redirect("/portal/payment");
-  }
-
-  // Paid but no onboarding yet
-  if (!hasOnboarded) {
-    redirect("/portal/onboarding");
   }
 
   const firstName = client.name.split(" ")[0];
@@ -287,6 +274,7 @@ export default async function ClientDashboard() {
           .
         </p>
       </main>
+      <PortalTour />
     </div>
   );
 }
