@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef } from "react";
+import { useRef, useCallback, useState } from "react";
 import Link from "next/link";
 import {
   TrendingUp,
@@ -42,6 +42,11 @@ export default function DashboardClient({ firstName, company, project, updates }
   const progressRef = useRef<HTMLDivElement>(null);
   const quicklinksRef = useRef<HTMLDivElement>(null);
   const updatesRef = useRef<HTMLDivElement>(null);
+  const [restartTour, setRestartTour] = useState<(() => void) | null>(null);
+
+  const handleTourReady = useCallback((restart: () => void) => {
+    setRestartTour(() => restart);
+  }, []);
 
   return (
     <div className="min-h-screen bg-[#f8fafc]">
@@ -168,19 +173,30 @@ export default function DashboardClient({ firstName, company, project, updates }
           )}
         </div>
 
-        <p className="text-[#0a1628]/30 text-xs text-center mt-8">
-          Questions? Reply to any of our emails or{" "}
-          <Link href="/#contact" className="text-[#c9a84c] hover:underline">
-            contact us here
-          </Link>
-          .
-        </p>
+        <div className="flex items-center justify-between mt-8">
+          <p className="text-[#0a1628]/30 text-xs">
+            Questions? Reply to any of our emails or{" "}
+            <Link href="/#contact" className="text-[#c9a84c] hover:underline">
+              contact us here
+            </Link>
+            .
+          </p>
+          {restartTour && (
+            <button
+              onClick={restartTour}
+              className="text-[#0a1628]/30 hover:text-[#0a1628]/60 text-xs underline underline-offset-2 transition-colors"
+            >
+              Take tour again
+            </button>
+          )}
+        </div>
       </main>
 
       <PortalTour
         progressRef={progressRef}
         quicklinksRef={quicklinksRef}
         updatesRef={updatesRef}
+        onReady={handleTourReady}
       />
     </div>
   );

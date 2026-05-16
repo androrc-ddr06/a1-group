@@ -43,9 +43,10 @@ type TourProps = {
   progressRef: React.RefObject<HTMLDivElement | null>;
   quicklinksRef: React.RefObject<HTMLDivElement | null>;
   updatesRef: React.RefObject<HTMLDivElement | null>;
+  onReady?: (restart: () => void) => void;
 };
 
-export default function PortalTour({ progressRef, quicklinksRef, updatesRef }: TourProps) {
+export default function PortalTour({ progressRef, quicklinksRef, updatesRef, onReady }: TourProps) {
   const [visible, setVisible] = useState(false);
   const [step, setStep] = useState(0);
   const [rect, setRect] = useState<Rect | null>(null);
@@ -64,15 +65,22 @@ export default function PortalTour({ progressRef, quicklinksRef, updatesRef }: T
     setRect({ top: r.top, left: r.left, width: r.width, height: r.height });
   }, [getRef]);
 
+  function startTour() {
+    setStep(0);
+    setVisible(true);
+    setTimeout(() => measureStep(0), 50);
+  }
+
   useEffect(() => {
+    onReady?.(startTour);
     if (!localStorage.getItem(STORAGE_KEY)) {
-      // Small delay so the page has painted before we measure
       setTimeout(() => {
         setVisible(true);
         measureStep(0);
       }, 400);
     }
-  }, [measureStep]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   useEffect(() => {
     if (visible) measureStep(step);
