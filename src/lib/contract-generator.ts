@@ -32,21 +32,27 @@ export async function generateAndSaveContract(
   const { data: urlData } = supabase.storage.from("client-assets").getPublicUrl(fileName);
   const contractUrl = urlData.publicUrl;
 
-  await supabase.from("contracts").upsert(
-    {
-      client_id: onboarding.client_id,
-      onboarding_id,
-      contract_html_url: contractUrl,
-      contract_status: "draft",
-      total_amount: amounts.total_cents,
-      payment_split: {
-        upfront_cents: amounts.upfront_cents,
-        on_delivery_cents: amounts.on_delivery_cents,
-        monthly_cents: amounts.monthly_cents,
-      },
+  // Delete any existing draft contract for this onboarding before inserting fresh
+  await supabase
+    .from("contracts")
+    .delete()
+    .eq("onboarding_id", onboarding_id)
+    .eq("contract_status", "draft");
+
+  const { error: insertError } = await supabase.from("contracts").insert({
+    client_id: onboarding.client_id,
+    onboarding_id,
+    contract_html_url: contractUrl,
+    contract_status: "draft",
+    total_amount: amounts.total_cents,
+    payment_split: {
+      upfront_cents: amounts.upfront_cents,
+      on_delivery_cents: amounts.on_delivery_cents,
+      monthly_cents: amounts.monthly_cents,
     },
-    { onConflict: "onboarding_id" }
-  );
+  });
+
+  if (insertError) throw new Error(`Contract insert failed: ${insertError.message}`);
 
   return {
     contractUrl,

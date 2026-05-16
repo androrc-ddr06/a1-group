@@ -118,8 +118,8 @@ Be specific, actionable, and professional. Use real marketing tactics and indust
     // Generate contract draft alongside brief
     try {
       await generateAndSaveContract(supabase, claude, onboarding, client, onboarding_id);
-    } catch (_) {
-      // Don't fail the whole request if contract generation fails
+    } catch (contractErr) {
+      console.error("Contract generation failed:", contractErr);
     }
 
     // Email Alejandro
