@@ -2,7 +2,7 @@
 
 import { useState, useEffect, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { Loader2, CheckCircle, CreditCard } from "lucide-react";
+import { Loader2, CreditCard } from "lucide-react";
 import Link from "next/link";
 
 type PaymentSplit = {
@@ -15,15 +15,25 @@ function PaymentContent() {
   const router = useRouter();
   const params = useSearchParams();
   const success = params.get("success") === "true";
+  const sessionId = params.get("session_id");
 
   const [split, setSplit] = useState<PaymentSplit | null>(null);
-  const [alreadyPaid, setAlreadyPaid] = useState(false);
   const [loading, setLoading] = useState(true);
   const [paying, setPaying] = useState(false);
   const [error, setError] = useState("");
 
   useEffect(() => {
     async function load() {
+      // Coming back from Stripe — verify and mark paid, then go straight to dashboard
+      if (success && sessionId) {
+        const verifyRes = await fetch(`/api/portal/payment?session_id=${sessionId}`);
+        const verifyData = await verifyRes.json();
+        if (verifyData.paid) {
+          router.replace("/portal/dashboard");
+          return;
+        }
+      }
+
       const res = await fetch("/api/portal/me");
       if (!res.ok) { router.push("/portal/login"); return; }
       const data = await res.json();
@@ -34,12 +44,15 @@ function PaymentContent() {
 
       const payments = data.payments ?? [];
       const paid = payments.find((p: { status: string }) => p.status === "paid");
-      if (paid) setAlreadyPaid(true);
+      if (paid) {
+        router.replace("/portal/dashboard");
+        return;
+      }
 
       setLoading(false);
     }
     load();
-  }, [router]);
+  }, [router, success, sessionId]);
 
   async function handlePay() {
     setPaying(true);
@@ -64,25 +77,6 @@ function PaymentContent() {
     );
   }
 
-  if (success || alreadyPaid) {
-    return (
-      <div className="min-h-screen bg-[#0a1628] flex items-center justify-center px-6">
-        <div className="text-center max-w-md">
-          <CheckCircle size={64} className="text-[#c9a84c] mx-auto mb-6" />
-          <h1 className="text-3xl font-extrabold text-white mb-3">Payment Received!</h1>
-          <p className="text-white/50 text-base leading-relaxed mb-8">
-            Your deposit has been confirmed. You&apos;re all set — head to your dashboard to get started.
-          </p>
-          <button
-            onClick={() => router.push("/portal/dashboard")}
-            className="bg-[#c9a84c] hover:bg-[#d4af61] text-[#0a1628] font-bold px-8 py-4 rounded-full transition-all"
-          >
-            Go to My Dashboard →
-          </button>
-        </div>
-      </div>
-    );
-  }
 
   return (
     <div className="min-h-screen bg-[#0a1628]">

@@ -1,6 +1,33 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { createSessionClient, createServerClient } from "@/lib/supabase-server";
 import Stripe from "stripe";
+
+// Called by the payment page after Stripe redirects back with ?session_id=...
+// Verifies the session directly with Stripe and marks the payment paid if confirmed.
+export async function GET(req: NextRequest) {
+  const sessionId = req.nextUrl.searchParams.get("session_id");
+  if (!sessionId) return NextResponse.json({ error: "Missing session_id" }, { status: 400 });
+
+  const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!);
+  const session = await stripe.checkout.sessions.retrieve(sessionId);
+
+  if (session.payment_status !== "paid") {
+    return NextResponse.json({ paid: false });
+  }
+
+  const admin = createServerClient();
+  await admin
+    .from("payments")
+    .update({ status: "paid", paid_at: new Date().toISOString(), stripe_payment_intent_id: session.payment_intent as string })
+    .eq("stripe_session_id", sessionId);
+
+  const clientId = session.metadata?.client_id;
+  if (clientId) {
+    await admin.from("clients").update({ status: "active" }).eq("id", clientId);
+  }
+
+  return NextResponse.json({ paid: true });
+}
 
 export async function POST() {
   const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!);
@@ -43,7 +70,7 @@ export async function POST() {
       },
     ],
     customer_email: user.email ?? undefined,
-    success_url: `${baseUrl}/portal/payment?success=true`,
+    success_url: `${baseUrl}/portal/payment?success=true&session_id={CHECKOUT_SESSION_ID}`,
     cancel_url: `${baseUrl}/portal/payment`,
     metadata: { client_id: client.id, contract_id: contract.id },
   });
