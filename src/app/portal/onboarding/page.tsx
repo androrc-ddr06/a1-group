@@ -193,10 +193,10 @@ export default function OnboardingPage() {
           <CheckCircle size={64} className="text-[#c9a84c] mx-auto mb-6" />
           <h1 className="text-3xl font-extrabold text-white mb-3">You&apos;re All Set!</h1>
           <p className="text-white/50 text-base leading-relaxed mb-4">
-            Your onboarding is complete. Alejandro will review everything and reach out within 24 hours to kick things off.
+            We&apos;ve received your answers. Alejandro will reach out within the next 12 hours to schedule a meeting and walk you through everything.
           </p>
           <p className="text-white/30 text-sm mb-8">
-            We&apos;re also generating a personalized strategy brief for your business — you&apos;ll hear from us soon.
+            Once your service agreement is ready, you&apos;ll get an email with a link to review and sign it.
           </p>
           <button onClick={() => router.push("/portal/dashboard")} className="bg-[#c9a84c] hover:bg-[#d4af61] text-[#0a1628] font-bold px-8 py-4 rounded-full transition-all">
             Go to My Dashboard →

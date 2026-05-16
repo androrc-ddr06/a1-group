@@ -71,13 +71,13 @@ function PaymentContent() {
           <CheckCircle size={64} className="text-[#c9a84c] mx-auto mb-6" />
           <h1 className="text-3xl font-extrabold text-white mb-3">Payment Received!</h1>
           <p className="text-white/50 text-base leading-relaxed mb-8">
-            Your deposit has been confirmed. Your onboarding form is now unlocked — let&apos;s get started!
+            Your deposit has been confirmed. You&apos;re all set — head to your dashboard to get started.
           </p>
           <button
-            onClick={() => router.push("/portal/onboarding")}
+            onClick={() => router.push("/portal/dashboard")}
             className="bg-[#c9a84c] hover:bg-[#d4af61] text-[#0a1628] font-bold px-8 py-4 rounded-full transition-all"
           >
-            Start Onboarding →
+            Go to My Dashboard →
           </button>
         </div>
       </div>
