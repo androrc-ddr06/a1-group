@@ -2,7 +2,7 @@
 
 import { useState, useEffect, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { Loader2, CreditCard } from "lucide-react";
+import { Loader2, CreditCard, CheckCircle } from "lucide-react";
 import Link from "next/link";
 
 type PaymentSplit = {
@@ -19,6 +19,7 @@ function PaymentContent() {
 
   const [split, setSplit] = useState<PaymentSplit | null>(null);
   const [loading, setLoading] = useState(true);
+  const [verifying, setVerifying] = useState(success && !!sessionId);
   const [paying, setPaying] = useState(false);
   const [error, setError] = useState("");
 
@@ -26,12 +27,14 @@ function PaymentContent() {
     async function load() {
       // Coming back from Stripe — verify and mark paid, then go straight to dashboard
       if (success && sessionId) {
+        setVerifying(true);
         const verifyRes = await fetch(`/api/portal/payment?session_id=${sessionId}`);
         const verifyData = await verifyRes.json();
         if (verifyData.paid) {
           router.replace("/portal/dashboard");
           return;
         }
+        setVerifying(false);
       }
 
       const res = await fetch("/api/portal/me");
@@ -69,10 +72,23 @@ function PaymentContent() {
 
   const fmt = (cents: number) => `$${(cents / 100).toLocaleString("en-US", { minimumFractionDigits: 2 })}`;
 
-  if (loading) {
+  if (verifying || loading) {
     return (
-      <div className="min-h-screen bg-[#0a1628] flex items-center justify-center">
-        <Loader2 size={32} className="text-[#c9a84c] animate-spin" />
+      <div className="min-h-screen bg-[#0a1628] flex items-center justify-center px-6">
+        <div className="text-center max-w-md">
+          {verifying ? (
+            <>
+              <div className="w-16 h-16 rounded-full bg-[#c9a84c]/15 border border-[#c9a84c]/30 flex items-center justify-center mx-auto mb-6">
+                <CheckCircle size={28} className="text-[#c9a84c]" />
+              </div>
+              <h1 className="text-2xl font-extrabold text-white mb-3">Payment Received!</h1>
+              <p className="text-white/50 text-sm mb-6">Confirming your deposit and setting up your dashboard…</p>
+              <Loader2 size={20} className="text-[#c9a84c] animate-spin mx-auto" />
+            </>
+          ) : (
+            <Loader2 size={32} className="text-[#c9a84c] animate-spin" />
+          )}
+        </div>
       </div>
     );
   }
