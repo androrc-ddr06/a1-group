@@ -2,9 +2,8 @@ import { NextResponse } from "next/server";
 import { createSessionClient, createServerClient } from "@/lib/supabase-server";
 import Stripe from "stripe";
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!);
-
 export async function POST() {
+  const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!);
   const session = await createSessionClient();
   const { data: { user } } = await session.auth.getUser();
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
