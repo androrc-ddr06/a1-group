@@ -47,20 +47,22 @@ export async function POST(req: NextRequest) {
             <h2 style="color: #c9a84c; margin: 0; font-size: 20px;">New Onboarding Submitted</h2>
             <p style="color: rgba(255,255,255,0.5); margin: 4px 0 0; font-size: 14px;">${client?.name} just completed their onboarding. AI strategy brief is being generated.</p>
           </div>
-          <p style="color: #666; font-size: 14px;">You'll receive another email in ~5-10 minutes when the strategy brief is ready.</p>
+          <p style="color: #666; font-size: 14px;">You'll receive another email shortly when the strategy brief is ready.</p>
           <a href="https://a1group.it.com/admin/clients" style="display: inline-block; margin-top: 16px; background: #c9a84c; color: #0a1628; font-weight: bold; padding: 12px 24px; border-radius: 999px; text-decoration: none; font-size: 14px;">View in Admin Panel →</a>
         </div>
       `,
     });
   } catch (_) {}
 
-  // Fire brief generation in background (don't await)
-  const baseUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "https://a1group.it.com";
-  fetch(`${baseUrl}/api/onboarding/generate-brief`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ onboarding_id: saved.id }),
-  }).catch(() => {});
+  // Generate brief inline (Haiku is fast enough to complete within 60s)
+  try {
+    const baseUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "https://a1group.it.com";
+    await fetch(`${baseUrl}/api/onboarding/generate-brief`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ onboarding_id: saved.id }),
+    });
+  } catch (_) {}
 
   return NextResponse.json({ success: true });
 }
