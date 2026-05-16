@@ -44,17 +44,11 @@ export default function OnboardingPage() {
 
   useEffect(() => {
     async function load() {
-      const supabase = createClient();
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) { router.push("/portal/login"); return; }
+      const res = await fetch("/api/portal/me");
+      if (res.status === 401) { router.push("/portal/login"); return; }
+      if (!res.ok) { router.push("/portal/login"); return; }
 
-      const { data: client } = await supabase
-        .from("clients")
-        .select("id, services, service_timeline")
-        .eq("email", user.email)
-        .single();
-
-      if (!client) { router.push("/portal/dashboard"); return; }
+      const client = await res.json();
       setClientId(client.id);
 
       const active = (client.service_timeline ?? [])
