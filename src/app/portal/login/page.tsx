@@ -103,7 +103,7 @@ export default function PortalLogin() {
     const supabase = createClient();
     const baseUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "https://a1group.it.com";
     await supabase.auth.resetPasswordForEmail(forgotEmail.trim(), {
-      redirectTo: `${baseUrl}/portal/reset-password`,
+      redirectTo: `${baseUrl}/auth/callback?next=/portal/reset-password`,
     });
     setForgotSent(true);
     setForgotLoading(false);
