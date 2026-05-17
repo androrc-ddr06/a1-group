@@ -8,6 +8,7 @@ import {
   MessageSquare,
   FolderOpen,
   Clock,
+  Video,
 } from "lucide-react";
 import SignOutButton from "./SignOutButton";
 import PortalTour from "./PortalTour";
@@ -27,6 +28,7 @@ type Props = {
   company: string;
   project: Project | null;
   updates: Update[];
+  pendingContentCount: number;
 };
 
 function formatDate(dateStr: string | null | undefined) {
@@ -38,7 +40,7 @@ function formatDate(dateStr: string | null | undefined) {
   });
 }
 
-export default function DashboardClient({ firstName, company, project, updates }: Props) {
+export default function DashboardClient({ firstName, company, project, updates, pendingContentCount }: Props) {
   const progressRef = useRef<HTMLDivElement>(null);
   const quicklinksRef = useRef<HTMLDivElement>(null);
   const updatesRef = useRef<HTMLDivElement>(null);
@@ -121,23 +123,26 @@ export default function DashboardClient({ firstName, company, project, updates }
         {/* Quick nav cards — tour step 2 */}
         <div ref={quicklinksRef} className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
           {[
-            { icon: MessageSquare, label: "Updates", href: "#updates", count: updates.length },
-            { icon: FolderOpen, label: "My Assets", href: "/portal/assets", count: null },
-            { icon: TrendingUp, label: "Reports", href: "/portal/reports", count: null },
-            { icon: FileText, label: "Onboarding", href: "/portal/onboarding/summary", count: null },
+            { icon: MessageSquare, label: "Updates", href: "#updates", badge: updates.length > 0 ? `${updates.length}` : null },
+            { icon: Video, label: "Content", href: "/portal/content", badge: pendingContentCount > 0 ? `${pendingContentCount} pending` : null },
+            { icon: FolderOpen, label: "My Assets", href: "/portal/assets", badge: null },
+            { icon: TrendingUp, label: "Reports", href: "/portal/reports", badge: null },
           ].map((item) => (
             <Link
               key={item.label}
               href={item.href}
               className="group bg-white border border-[#0a1628]/8 hover:border-[#0a1628]/20 rounded-2xl p-5 flex flex-col gap-3 transition-all hover:shadow-md"
             >
-              <div className="w-10 h-10 bg-[#f8fafc] group-hover:bg-[#0a1628] rounded-xl flex items-center justify-center transition-colors">
+              <div className="relative w-10 h-10 bg-[#f8fafc] group-hover:bg-[#0a1628] rounded-xl flex items-center justify-center transition-colors">
                 <item.icon size={18} className="text-[#0a1628] group-hover:text-white transition-colors" />
+                {item.badge && item.label === "Content" && (
+                  <span className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-[#c9a84c] rounded-full" />
+                )}
               </div>
               <div>
                 <div className="text-[#0a1628] font-semibold text-sm">{item.label}</div>
-                {item.count !== null && (
-                  <div className="text-[#0a1628]/40 text-xs mt-0.5">{item.count} updates</div>
+                {item.badge && (
+                  <div className="text-[#0a1628]/40 text-xs mt-0.5">{item.badge}</div>
                 )}
               </div>
             </Link>

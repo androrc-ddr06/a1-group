@@ -68,6 +68,12 @@ async function getClientData() {
     .limit(1)
     .single();
 
+  const { data: pendingBatches } = await admin
+    .from("content_batches")
+    .select("id")
+    .eq("client_id", resolvedClient.id)
+    .eq("status", "pending");
+
   return {
     client: resolvedClient,
     project,
@@ -75,6 +81,7 @@ async function getClientData() {
     hasOnboarded: !!onboarding,
     contract: contract ?? null,
     hasPaid: !!paidPayment,
+    pendingContentCount: pendingBatches?.length ?? 0,
   };
 }
 
@@ -85,7 +92,7 @@ export default async function ClientDashboard() {
     redirect("/portal/login");
   }
 
-  const { client, project, updates, hasOnboarded, contract, hasPaid } = data;
+  const { client, project, updates, hasOnboarded, contract, hasPaid, pendingContentCount } = data;
 
   // Not yet onboarded — send to onboarding form
   if (!hasOnboarded) {
@@ -144,6 +151,7 @@ export default async function ClientDashboard() {
       company={client.company}
       project={project ?? null}
       updates={updates}
+      pendingContentCount={pendingContentCount}
     />
   );
 }

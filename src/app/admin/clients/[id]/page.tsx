@@ -111,7 +111,25 @@ type FullClient = {
   client_assets: ClientAsset[];
 };
 
-type Tab = "overview" | "brief" | "contract" | "checklist" | "assets";
+type ContentRevision = {
+  id: string;
+  video_title: string;
+  description: string;
+  image_urls: string[];
+  created_at: string;
+};
+
+type ContentBatch = {
+  id: string;
+  label: string;
+  drive_url: string;
+  status: "pending" | "approved";
+  approved_at: string | null;
+  created_at: string;
+  content_revisions: ContentRevision[];
+};
+
+type Tab = "overview" | "brief" | "contract" | "checklist" | "assets" | "content";
 
 const statusColors: Record<string, string> = {
   active: "bg-emerald-500/15 text-emerald-400",
@@ -176,6 +194,12 @@ export default function ClientDetailPage() {
   const [deleteModal, setDeleteModal] = useState(false);
   const [deleting, setDeleting] = useState(false);
 
+  // Content
+  const [contentBatches, setContentBatches] = useState<ContentBatch[]>([]);
+  const [contentLabel, setContentLabel] = useState("");
+  const [contentUrl, setContentUrl] = useState("");
+  const [sendingContent, setSendingContent] = useState(false);
+
   // Contract
   const [isDraftingContract, setIsDraftingContract] = useState(false);
   const [declineModal, setDeclineModal] = useState(false);
@@ -211,6 +235,10 @@ export default function ClientDetailPage() {
       setLoading(false);
     })();
   }, [fetchClient]);
+
+  useEffect(() => {
+    if (activeTab === "content") fetchContentBatches();
+  }, [activeTab]);
 
   function copyCode(code: string) {
     navigator.clipboard.writeText(code);
@@ -325,6 +353,39 @@ export default function ClientDetailPage() {
     setAssetUrl("");
     await fetchClient();
     setSavingAssets(false);
+  }
+
+  async function fetchContentBatches() {
+    const res = await fetch(`/api/admin/clients/${id}/content`, { headers });
+    if (res.ok) {
+      const { batches } = await res.json();
+      setContentBatches(batches);
+    }
+  }
+
+  async function handleSendContent() {
+    if (!contentLabel.trim() || !contentUrl.trim()) return;
+    setSendingContent(true);
+    const res = await fetch(`/api/admin/clients/${id}/content`, {
+      method: "POST",
+      headers,
+      body: JSON.stringify({ label: contentLabel.trim(), drive_url: contentUrl.trim() }),
+    });
+    if (res.ok) {
+      setContentLabel("");
+      setContentUrl("");
+      await fetchContentBatches();
+    }
+    setSendingContent(false);
+  }
+
+  async function handleDeleteBatch(batchId: string) {
+    await fetch(`/api/admin/clients/${id}/content`, {
+      method: "DELETE",
+      headers,
+      body: JSON.stringify({ batch_id: batchId }),
+    });
+    await fetchContentBatches();
   }
 
   async function handleDeleteClient() {
@@ -461,6 +522,7 @@ export default function ClientDetailPage() {
     { key: "contract", label: "Contract" },
     { key: "checklist", label: `Checklist${totalTasks > 0 ? ` (${completedTasks}/${totalTasks})` : ""}` },
     { key: "assets", label: `Assets${(client.client_assets?.length ?? 0) > 0 ? ` (${client.client_assets.length})` : ""}` },
+    { key: "content", label: `Content${contentBatches.length > 0 ? ` (${contentBatches.length})` : ""}` },
   ];
 
   return (
@@ -1108,6 +1170,104 @@ export default function ClientDetailPage() {
                       <a href={asset.url} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 text-[#c9a84c] text-xs font-semibold hover:text-[#d4af61] transition-colors flex-shrink-0">
                         Open <ExternalLink size={11} />
                       </a>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* ─── CONTENT TAB ─── */}
+        {activeTab === "content" && (
+          <div className="space-y-6">
+            {/* Send for approval form */}
+            <div className="bg-[#0a1628] border border-white/10 rounded-2xl p-6">
+              <h3 className="text-white font-bold mb-1">Send Content for Approval</h3>
+              <p className="text-white/30 text-xs mb-5">Paste a Google Drive link with this week&apos;s videos. {client.name.split(" ")[0]} will see it on their portal and can approve or request edits.</p>
+              <div className="flex gap-2 flex-wrap">
+                <input
+                  type="text"
+                  value={contentLabel}
+                  onChange={(e) => setContentLabel(e.target.value)}
+                  placeholder='e.g. "Week 3 — May Content"'
+                  className="flex-1 min-w-[180px] bg-white/5 border border-white/15 rounded-xl px-4 py-2.5 text-white placeholder:text-white/25 text-sm focus:outline-none focus:border-[#c9a84c]/60 transition-all"
+                />
+                <input
+                  type="text"
+                  value={contentUrl}
+                  onChange={(e) => setContentUrl(e.target.value)}
+                  placeholder="https://drive.google.com/..."
+                  className="flex-1 min-w-[240px] bg-white/5 border border-white/15 rounded-xl px-4 py-2.5 text-white placeholder:text-white/25 text-sm focus:outline-none focus:border-[#c9a84c]/60 transition-all"
+                />
+                <button
+                  onClick={handleSendContent}
+                  disabled={sendingContent || !contentLabel.trim() || !contentUrl.trim()}
+                  className="flex items-center gap-2 bg-[#c9a84c] hover:bg-[#d4af61] disabled:opacity-50 text-[#0a1628] font-bold text-sm px-5 py-2.5 rounded-full transition-all"
+                >
+                  {sendingContent ? "Sending…" : "Send for Approval"}
+                </button>
+              </div>
+            </div>
+
+            {/* Batches list */}
+            <div className="bg-[#0a1628] border border-white/10 rounded-2xl p-6">
+              <h3 className="text-white/40 text-xs uppercase tracking-wide mb-4">Sent Batches</h3>
+              {contentBatches.length === 0 ? (
+                <p className="text-white/25 text-sm text-center py-4">No content batches sent yet.</p>
+              ) : (
+                <div className="space-y-4">
+                  {contentBatches.map((batch) => (
+                    <div key={batch.id} className="bg-white/5 border border-white/8 rounded-xl p-4">
+                      <div className="flex items-start justify-between gap-3 mb-2">
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2 mb-1">
+                            <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${
+                              batch.status === "approved"
+                                ? "bg-emerald-500/15 text-emerald-400"
+                                : "bg-amber-500/15 text-amber-400"
+                            }`}>
+                              {batch.status === "approved" ? "Approved" : "Pending"}
+                            </span>
+                            <span className="text-white/25 text-xs">{formatDate(batch.created_at)}</span>
+                          </div>
+                          <p className="text-white font-semibold text-sm">{batch.label}</p>
+                          <a href={batch.drive_url} target="_blank" rel="noopener noreferrer" className="text-[#c9a84c]/60 hover:text-[#c9a84c] text-xs flex items-center gap-1 mt-0.5 transition-colors">
+                            <ExternalLink size={11} /> Drive link
+                          </a>
+                        </div>
+                        <button
+                          onClick={() => handleDeleteBatch(batch.id)}
+                          className="text-white/15 hover:text-red-400 transition-colors flex-shrink-0"
+                        >
+                          <Trash2 size={13} />
+                        </button>
+                      </div>
+
+                      {/* Revision requests */}
+                      {batch.content_revisions.length > 0 && (
+                        <div className="mt-3 pt-3 border-t border-white/8 space-y-3">
+                          <p className="text-white/30 text-xs uppercase tracking-wide">
+                            {batch.content_revisions.length} revision request{batch.content_revisions.length !== 1 ? "s" : ""}
+                          </p>
+                          {batch.content_revisions.map((rev) => (
+                            <div key={rev.id} className="bg-white/5 rounded-lg p-3">
+                              <p className="text-[#c9a84c] text-xs font-semibold mb-1">{rev.video_title}</p>
+                              <p className="text-white/60 text-sm leading-relaxed">{rev.description}</p>
+                              {rev.image_urls?.length > 0 && (
+                                <div className="mt-2 space-y-1">
+                                  {rev.image_urls.map((url, i) => (
+                                    <a key={i} href={url} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 text-[#c9a84c]/60 hover:text-[#c9a84c] text-xs transition-colors">
+                                      <ExternalLink size={10} /> Reference image {i + 1}
+                                    </a>
+                                  ))}
+                                </div>
+                              )}
+                              <p className="text-white/20 text-xs mt-1.5">{formatDate(rev.created_at)}</p>
+                            </div>
+                          ))}
+                        </div>
+                      )}
                     </div>
                   ))}
                 </div>
