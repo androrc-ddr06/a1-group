@@ -125,7 +125,7 @@ export default async function ReportsPage() {
               <div className="h-4 bg-white/10 rounded-full overflow-hidden">
                 <div
                   className="h-full bg-[#c9a84c] rounded-full transition-all duration-700"
-                  style={{ width: `${project.progress_percent}%` }}
+                  style={{ width: `${Math.max(2, project.progress_percent)}%` }}
                 />
               </div>
             </div>

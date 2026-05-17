@@ -102,7 +102,7 @@ export default function DashboardClient({ firstName, company, project, updates }
                 <div className="h-3 bg-white/10 rounded-full overflow-hidden">
                   <div
                     className="h-full bg-[#c9a84c] rounded-full transition-all duration-700"
-                    style={{ width: `${project.progress_percent}%` }}
+                    style={{ width: `${Math.max(2, project.progress_percent)}%` }}
                   />
                 </div>
               </div>

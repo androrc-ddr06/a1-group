@@ -15,16 +15,31 @@ export async function PATCH(
   const body = await req.json();
   const supabase = createServerClient();
 
-  if ("assets" in body) {
+  if (body.action === "add_asset") {
+    const { label, url } = body;
+    if (!label?.trim() || !url?.trim()) {
+      return NextResponse.json({ error: "label and url required" }, { status: 400 });
+    }
     const { error } = await supabase
-      .from("clients")
-      .update({ assets: body.assets })
-      .eq("id", id);
+      .from("client_assets")
+      .insert({ client_id: id, label: label.trim(), url: url.trim(), submitted_by: "admin" });
     if (error) return NextResponse.json({ error: error.message }, { status: 500 });
     return NextResponse.json({ ok: true });
   }
 
-  return NextResponse.json({ error: "No recognized fields to update" }, { status: 400 });
+  if (body.action === "delete_asset") {
+    const { asset_id } = body;
+    if (!asset_id) return NextResponse.json({ error: "asset_id required" }, { status: 400 });
+    const { error } = await supabase
+      .from("client_assets")
+      .delete()
+      .eq("id", asset_id)
+      .eq("client_id", id);
+    if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+    return NextResponse.json({ ok: true });
+  }
+
+  return NextResponse.json({ error: "No recognized action" }, { status: 400 });
 }
 
 export async function GET(
@@ -36,7 +51,7 @@ export async function GET(
   const { id } = await params;
   const supabase = createServerClient();
 
-  const [clientRes, tasksRes, callNotesRes, updatesRes] = await Promise.all([
+  const [clientRes, tasksRes, callNotesRes, updatesRes, assetsRes] = await Promise.all([
     supabase
       .from("clients")
       .select("*, projects(*), onboarding_responses(*), contracts(*), payments(*)")
@@ -58,6 +73,11 @@ export async function GET(
       .select("*")
       .eq("client_id", id)
       .order("created_at", { ascending: false }),
+    supabase
+      .from("client_assets")
+      .select("*")
+      .eq("client_id", id)
+      .order("created_at", { ascending: false }),
   ]);
 
   if (clientRes.error || !clientRes.data) {
@@ -69,5 +89,6 @@ export async function GET(
     tasks: tasksRes.data ?? [],
     call_notes: callNotesRes.data ?? null,
     updates: updatesRes.data ?? [],
+    client_assets: assetsRes.data ?? [],
   });
 }

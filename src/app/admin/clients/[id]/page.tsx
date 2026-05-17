@@ -87,7 +87,7 @@ type CallNote = {
   updated_at: string;
 };
 
-type Asset = { label: string; url: string };
+type ClientAsset = { id: string; label: string; url: string; submitted_by: string; created_at: string };
 
 type FullClient = {
   id: string;
@@ -100,7 +100,6 @@ type FullClient = {
   service_timeline: { month: number; service: string; status: "active" | "upcoming" }[];
   contract_months: number;
   admin_notes: string | null;
-  assets: Asset[] | null;
   created_at: string;
   projects: Project[];
   onboarding_responses: OnboardingResponse[];
@@ -109,6 +108,7 @@ type FullClient = {
   tasks: Task[];
   updates: Update[];
   call_notes: CallNote | null;
+  client_assets: ClientAsset[];
 };
 
 type Tab = "overview" | "brief" | "contract" | "checklist" | "assets";
@@ -312,12 +312,10 @@ export default function ClientDetailPage() {
   async function handleAddAsset() {
     if (!assetLabel.trim() || !assetUrl.trim()) return;
     setSavingAssets(true);
-    const current = client?.assets ?? [];
-    const updated = [...current, { label: assetLabel.trim(), url: assetUrl.trim() }];
     await fetch(`/api/admin/clients/${id}`, {
       method: "PATCH",
       headers,
-      body: JSON.stringify({ assets: updated }),
+      body: JSON.stringify({ action: "add_asset", label: assetLabel.trim(), url: assetUrl.trim() }),
     });
     setAssetLabel("");
     setAssetUrl("");
@@ -325,14 +323,12 @@ export default function ClientDetailPage() {
     setSavingAssets(false);
   }
 
-  async function handleDeleteAsset(index: number) {
+  async function handleDeleteAsset(assetId: string) {
     setSavingAssets(true);
-    const current = client?.assets ?? [];
-    const updated = current.filter((_, i) => i !== index);
     await fetch(`/api/admin/clients/${id}`, {
       method: "PATCH",
       headers,
-      body: JSON.stringify({ assets: updated }),
+      body: JSON.stringify({ action: "delete_asset", asset_id: assetId }),
     });
     await fetchClient();
     setSavingAssets(false);
@@ -449,7 +445,7 @@ export default function ClientDetailPage() {
     { key: "brief", label: "Brief & Onboarding" },
     { key: "contract", label: "Contract" },
     { key: "checklist", label: `Checklist${totalTasks > 0 ? ` (${completedTasks}/${totalTasks})` : ""}` },
-    { key: "assets", label: `Assets${(client.assets?.length ?? 0) > 0 ? ` (${client.assets!.length})` : ""}` },
+    { key: "assets", label: `Assets${(client.client_assets?.length ?? 0) > 0 ? ` (${client.client_assets.length})` : ""}` },
   ];
 
   return (
@@ -1010,34 +1006,25 @@ export default function ClientDetailPage() {
         {/* ─── ASSETS TAB ─── */}
         {activeTab === "assets" && (
           <div className="space-y-6">
+            {/* Files from admin to client */}
             <div className="bg-[#0a1628] border border-white/10 rounded-2xl p-6">
-              <h3 className="text-white font-bold mb-1">Client Assets</h3>
-              <p className="text-white/30 text-xs mb-6">Files and links that will appear on {client.name.split(" ")[0]}&apos;s portal under &quot;My Assets&quot;.</p>
+              <h3 className="text-white font-bold mb-1">Files You&apos;ve Shared with {client.name.split(" ")[0]}</h3>
+              <p className="text-white/30 text-xs mb-5">These appear on {client.name.split(" ")[0]}&apos;s portal under &quot;Files from A1 Group&quot;.</p>
 
-              {/* Current assets */}
-              {(client.assets ?? []).length === 0 ? (
-                <p className="text-white/25 text-sm text-center py-6">No assets added yet.</p>
+              {(client.client_assets ?? []).filter((a) => a.submitted_by === "admin").length === 0 ? (
+                <p className="text-white/25 text-sm text-center py-4">No files shared yet.</p>
               ) : (
-                <div className="space-y-2 mb-6">
-                  {(client.assets ?? []).map((asset, i) => (
-                    <div key={i} className="flex items-center gap-3 bg-white/5 rounded-xl px-4 py-3">
+                <div className="space-y-2 mb-5">
+                  {client.client_assets.filter((a) => a.submitted_by === "admin").map((asset) => (
+                    <div key={asset.id} className="flex items-center gap-3 bg-white/5 rounded-xl px-4 py-3">
                       <div className="flex-1 min-w-0">
                         <div className="text-white text-sm font-semibold truncate">{asset.label}</div>
                         <div className="text-white/30 text-xs truncate">{asset.url}</div>
                       </div>
-                      <a
-                        href={asset.url}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="text-[#c9a84c]/60 hover:text-[#c9a84c] transition-colors flex-shrink-0"
-                      >
+                      <a href={asset.url} target="_blank" rel="noopener noreferrer" className="text-[#c9a84c]/60 hover:text-[#c9a84c] transition-colors flex-shrink-0">
                         <ExternalLink size={13} />
                       </a>
-                      <button
-                        onClick={() => handleDeleteAsset(i)}
-                        disabled={savingAssets}
-                        className="text-white/15 hover:text-red-400 transition-colors flex-shrink-0 disabled:opacity-40"
-                      >
+                      <button onClick={() => handleDeleteAsset(asset.id)} disabled={savingAssets} className="text-white/15 hover:text-red-400 transition-colors flex-shrink-0 disabled:opacity-40">
                         <Trash2 size={13} />
                       </button>
                     </div>
@@ -1045,7 +1032,6 @@ export default function ClientDetailPage() {
                 </div>
               )}
 
-              {/* Add asset */}
               <div className="flex gap-2 flex-wrap">
                 <input
                   type="text"
@@ -1059,7 +1045,7 @@ export default function ClientDetailPage() {
                   value={assetUrl}
                   onChange={(e) => setAssetUrl(e.target.value)}
                   onKeyDown={(e) => e.key === "Enter" && handleAddAsset()}
-                  placeholder="URL (Google Drive, Dropbox, etc.)"
+                  placeholder="Google Drive or Dropbox URL"
                   className="flex-1 min-w-[200px] bg-white/5 border border-white/15 rounded-xl px-4 py-2.5 text-white placeholder:text-white/25 text-sm focus:outline-none focus:border-[#c9a84c]/60 transition-all"
                 />
                 <button
@@ -1067,9 +1053,33 @@ export default function ClientDetailPage() {
                   disabled={savingAssets || !assetLabel.trim() || !assetUrl.trim()}
                   className="flex items-center gap-1.5 bg-white/10 hover:bg-white/15 text-white/70 font-semibold text-sm px-4 py-2.5 rounded-xl transition-all disabled:opacity-40"
                 >
-                  <Plus size={14} /> Add
+                  <Plus size={14} /> Share
                 </button>
               </div>
+            </div>
+
+            {/* Files from client to admin */}
+            <div className="bg-[#0a1628] border border-white/10 rounded-2xl p-6">
+              <h3 className="text-white font-bold mb-1">Files {client.name.split(" ")[0]} Shared with You</h3>
+              <p className="text-white/30 text-xs mb-5">Google Drive links the client submitted from their portal.</p>
+
+              {(client.client_assets ?? []).filter((a) => a.submitted_by === "client").length === 0 ? (
+                <p className="text-white/25 text-sm text-center py-4">No files shared by client yet.</p>
+              ) : (
+                <div className="space-y-2">
+                  {client.client_assets.filter((a) => a.submitted_by === "client").map((asset) => (
+                    <div key={asset.id} className="flex items-center gap-3 bg-white/5 rounded-xl px-4 py-3">
+                      <div className="flex-1 min-w-0">
+                        <div className="text-white text-sm font-semibold truncate">{asset.label}</div>
+                        <div className="text-white/30 text-xs truncate">{asset.url}</div>
+                      </div>
+                      <a href={asset.url} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 text-[#c9a84c] text-xs font-semibold hover:text-[#d4af61] transition-colors flex-shrink-0">
+                        Open <ExternalLink size={11} />
+                      </a>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           </div>
         )}
