@@ -101,12 +101,12 @@ export default async function ClientDashboard() {
   const contractPending = !contract || contract.contract_status === "draft" || contract.contract_status === "changes_requested";
 
   // Contract approved but not signed
-  if (contract.contract_status === "approved") {
+  if (contract?.contract_status === "approved") {
     redirect("/portal/contract");
   }
 
   // Signed but not paid
-  if (contract.contract_status === "signed" && !hasPaid) {
+  if (contract?.contract_status === "signed" && !hasPaid) {
     redirect("/portal/payment");
   }
 
