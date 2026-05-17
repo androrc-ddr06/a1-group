@@ -1,6 +1,7 @@
 "use client";
 
-import { useRef, useCallback, useState } from "react";
+import { useRef, useCallback, useState, useEffect } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import {
   TrendingUp,
@@ -9,9 +10,12 @@ import {
   FolderOpen,
   Clock,
   Video,
+  CreditCard,
+  Lock,
 } from "lucide-react";
 import SignOutButton from "./SignOutButton";
 import PortalTour from "./PortalTour";
+import { OnboardingTour } from "./PortalTour";
 
 type Project = {
   name: string;
@@ -29,6 +33,8 @@ type Props = {
   project: Project | null;
   updates: Update[];
   pendingContentCount: number;
+  contractPending: boolean;
+  contractStatus: string | null;
 };
 
 function formatDate(dateStr: string | null | undefined) {
@@ -40,15 +46,36 @@ function formatDate(dateStr: string | null | undefined) {
   });
 }
 
-export default function DashboardClient({ firstName, company, project, updates, pendingContentCount }: Props) {
+export default function DashboardClient({
+  firstName, company, project, updates, pendingContentCount,
+  contractPending, contractStatus,
+}: Props) {
+  const router = useRouter();
+  const searchParams = useSearchParams();
   const progressRef = useRef<HTMLDivElement>(null);
   const quicklinksRef = useRef<HTMLDivElement>(null);
   const updatesRef = useRef<HTMLDivElement>(null);
+  const contractCardRef = useRef<HTMLDivElement>(null);
+  const paymentCardRef = useRef<HTMLDivElement>(null);
   const [restartTour, setRestartTour] = useState<(() => void) | null>(null);
+  const [forceWelcomeTour, setForceWelcomeTour] = useState(false);
 
   const handleTourReady = useCallback((restart: () => void) => {
     setRestartTour(() => restart);
   }, []);
+
+  // Auto-launch welcome tour after payment via ?welcome=1
+  useEffect(() => {
+    if (searchParams.get("welcome") === "1") {
+      localStorage.removeItem("a1_portal_tour_done");
+      setForceWelcomeTour(true);
+      router.replace("/portal/dashboard");
+    }
+  }, [searchParams, router]);
+
+  const bannerMessage = contractStatus === "changes_requested"
+    ? "Your revised contract is on its way — we'll email you as soon as it's ready to sign."
+    : "Your service agreement is being prepared — we'll email you as soon as it's ready to sign.";
 
   return (
     <div className="min-h-screen bg-[#f8fafc]">
@@ -71,12 +98,20 @@ export default function DashboardClient({ firstName, company, project, updates, 
 
       <main className="max-w-6xl mx-auto px-6 py-10">
         {/* Welcome */}
-        <div className="mb-8">
+        <div className="mb-6">
           <h1 className="text-2xl font-extrabold text-[#0a1628]">
             Welcome back, {firstName} 👋
           </h1>
           <p className="text-[#0a1628]/50 text-sm mt-1">{company}</p>
         </div>
+
+        {/* Contract pending banner */}
+        {contractPending && (
+          <div className="flex items-start gap-3 bg-[#c9a84c]/8 border border-[#c9a84c]/25 rounded-xl px-4 py-3 mb-6">
+            <FileText size={15} className="text-[#c9a84c] flex-shrink-0 mt-0.5" />
+            <p className="text-[#0a1628]/70 text-sm leading-relaxed">{bannerMessage}</p>
+          </div>
+        )}
 
         {/* Progress card — tour step 1 */}
         <div ref={progressRef}>
@@ -120,36 +155,118 @@ export default function DashboardClient({ firstName, company, project, updates, 
           )}
         </div>
 
-        {/* Quick nav cards — tour step 2 */}
-        <div ref={quicklinksRef} className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-          {[
-            { icon: MessageSquare, label: "Updates", href: "#updates", badge: updates.length > 0 ? `${updates.length}` : null },
-            { icon: Video, label: "Content", href: "/portal/content", badge: pendingContentCount > 0 ? `${pendingContentCount} pending` : null },
-            { icon: FolderOpen, label: "My Assets", href: "/portal/assets", badge: null },
-            { icon: TrendingUp, label: "Reports", href: "/portal/reports", badge: null },
-          ].map((item) => (
-            <Link
-              key={item.label}
-              href={item.href}
-              className="group bg-white border border-[#0a1628]/8 hover:border-[#0a1628]/20 rounded-2xl p-5 flex flex-col gap-3 transition-all hover:shadow-md"
-            >
-              <div className="relative w-10 h-10 bg-[#f8fafc] group-hover:bg-[#0a1628] rounded-xl flex items-center justify-center transition-colors">
-                <item.icon size={18} className="text-[#0a1628] group-hover:text-white transition-colors" />
-                {item.badge && item.label === "Content" && (
-                  <span className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-[#c9a84c] rounded-full" />
-                )}
+        {/* Nav cards — 6 cards: Contract, Payment, Updates, Content, Assets, Reports */}
+        <div ref={quicklinksRef} className="grid grid-cols-2 lg:grid-cols-3 gap-4 mb-8">
+
+          {/* Contract card */}
+          <div ref={contractCardRef}>
+            {contractPending ? (
+              <div className="bg-white border border-[#0a1628]/8 rounded-2xl p-5 flex flex-col gap-3 opacity-60 cursor-default select-none">
+                <div className="relative w-10 h-10 bg-[#f8fafc] rounded-xl flex items-center justify-center">
+                  <Lock size={16} className="text-[#0a1628]/40" />
+                </div>
+                <div>
+                  <div className="text-[#0a1628] font-semibold text-sm">Contract</div>
+                  <div className="text-[#0a1628]/35 text-xs mt-0.5">Pending — coming soon</div>
+                </div>
               </div>
-              <div>
-                <div className="text-[#0a1628] font-semibold text-sm">{item.label}</div>
-                {item.badge && (
-                  <div className="text-[#0a1628]/40 text-xs mt-0.5">{item.badge}</div>
-                )}
+            ) : (
+              <Link
+                href="/portal/contract"
+                className="group bg-white border border-[#0a1628]/8 hover:border-[#0a1628]/20 rounded-2xl p-5 flex flex-col gap-3 transition-all hover:shadow-md"
+              >
+                <div className="w-10 h-10 bg-[#f8fafc] group-hover:bg-[#0a1628] rounded-xl flex items-center justify-center transition-colors">
+                  <FileText size={18} className="text-[#0a1628] group-hover:text-white transition-colors" />
+                </div>
+                <div className="text-[#0a1628] font-semibold text-sm">Contract</div>
+              </Link>
+            )}
+          </div>
+
+          {/* Payment card */}
+          <div ref={paymentCardRef}>
+            {contractPending ? (
+              <div className="bg-white border border-[#0a1628]/8 rounded-2xl p-5 flex flex-col gap-3 opacity-60 cursor-default select-none">
+                <div className="relative w-10 h-10 bg-[#f8fafc] rounded-xl flex items-center justify-center">
+                  <Lock size={16} className="text-[#0a1628]/40" />
+                </div>
+                <div>
+                  <div className="text-[#0a1628] font-semibold text-sm">Payment</div>
+                  <div className="text-[#0a1628]/35 text-xs mt-0.5">Unlocks after signing</div>
+                </div>
               </div>
-            </Link>
-          ))}
+            ) : (
+              <Link
+                href="/portal/payment"
+                className="group bg-white border border-[#0a1628]/8 hover:border-[#0a1628]/20 rounded-2xl p-5 flex flex-col gap-3 transition-all hover:shadow-md"
+              >
+                <div className="w-10 h-10 bg-[#f8fafc] group-hover:bg-[#0a1628] rounded-xl flex items-center justify-center transition-colors">
+                  <CreditCard size={18} className="text-[#0a1628] group-hover:text-white transition-colors" />
+                </div>
+                <div className="text-[#0a1628] font-semibold text-sm">Payment</div>
+              </Link>
+            )}
+          </div>
+
+          {/* Updates */}
+          <Link
+            href="#updates"
+            className="group bg-white border border-[#0a1628]/8 hover:border-[#0a1628]/20 rounded-2xl p-5 flex flex-col gap-3 transition-all hover:shadow-md"
+          >
+            <div className="w-10 h-10 bg-[#f8fafc] group-hover:bg-[#0a1628] rounded-xl flex items-center justify-center transition-colors">
+              <MessageSquare size={18} className="text-[#0a1628] group-hover:text-white transition-colors" />
+            </div>
+            <div>
+              <div className="text-[#0a1628] font-semibold text-sm">Updates</div>
+              {updates.length > 0 && (
+                <div className="text-[#0a1628]/40 text-xs mt-0.5">{updates.length} update{updates.length !== 1 ? "s" : ""}</div>
+              )}
+            </div>
+          </Link>
+
+          {/* Content */}
+          <Link
+            href="/portal/content"
+            className="group bg-white border border-[#0a1628]/8 hover:border-[#0a1628]/20 rounded-2xl p-5 flex flex-col gap-3 transition-all hover:shadow-md"
+          >
+            <div className="relative w-10 h-10 bg-[#f8fafc] group-hover:bg-[#0a1628] rounded-xl flex items-center justify-center transition-colors">
+              <Video size={18} className="text-[#0a1628] group-hover:text-white transition-colors" />
+              {pendingContentCount > 0 && (
+                <span className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-[#c9a84c] rounded-full" />
+              )}
+            </div>
+            <div>
+              <div className="text-[#0a1628] font-semibold text-sm">Content</div>
+              {pendingContentCount > 0 && (
+                <div className="text-[#0a1628]/40 text-xs mt-0.5">{pendingContentCount} pending</div>
+              )}
+            </div>
+          </Link>
+
+          {/* Assets */}
+          <Link
+            href="/portal/assets"
+            className="group bg-white border border-[#0a1628]/8 hover:border-[#0a1628]/20 rounded-2xl p-5 flex flex-col gap-3 transition-all hover:shadow-md"
+          >
+            <div className="w-10 h-10 bg-[#f8fafc] group-hover:bg-[#0a1628] rounded-xl flex items-center justify-center transition-colors">
+              <FolderOpen size={18} className="text-[#0a1628] group-hover:text-white transition-colors" />
+            </div>
+            <div className="text-[#0a1628] font-semibold text-sm">My Assets</div>
+          </Link>
+
+          {/* Reports */}
+          <Link
+            href="/portal/reports"
+            className="group bg-white border border-[#0a1628]/8 hover:border-[#0a1628]/20 rounded-2xl p-5 flex flex-col gap-3 transition-all hover:shadow-md"
+          >
+            <div className="w-10 h-10 bg-[#f8fafc] group-hover:bg-[#0a1628] rounded-xl flex items-center justify-center transition-colors">
+              <TrendingUp size={18} className="text-[#0a1628] group-hover:text-white transition-colors" />
+            </div>
+            <div className="text-[#0a1628] font-semibold text-sm">Reports</div>
+          </Link>
         </div>
 
-        {/* Updates feed — tour step 3 */}
+        {/* Updates feed */}
         <div ref={updatesRef} id="updates" className="bg-white border border-[#0a1628]/8 rounded-2xl p-6">
           <h3 className="text-[#0a1628] font-bold text-lg mb-5">
             Latest Updates from A1 Group
@@ -186,7 +303,7 @@ export default function DashboardClient({ firstName, company, project, updates, 
             </Link>
             .
           </p>
-          {restartTour && (
+          {restartTour && !contractPending && (
             <button
               onClick={restartTour}
               className="text-[#0a1628]/30 hover:text-[#0a1628]/60 text-xs underline underline-offset-2 transition-colors"
@@ -197,12 +314,23 @@ export default function DashboardClient({ firstName, company, project, updates, 
         </div>
       </main>
 
-      <PortalTour
-        progressRef={progressRef}
-        quicklinksRef={quicklinksRef}
-        updatesRef={updatesRef}
-        onReady={handleTourReady}
-      />
+      {/* Show onboarding tour when contract is pending, welcome tour when fully active */}
+      {contractPending ? (
+        <OnboardingTour
+          progressRef={progressRef}
+          contractCardRef={contractCardRef}
+          paymentCardRef={paymentCardRef}
+          quicklinksRef={quicklinksRef}
+        />
+      ) : (
+        <PortalTour
+          progressRef={progressRef}
+          quicklinksRef={quicklinksRef}
+          updatesRef={updatesRef}
+          onReady={handleTourReady}
+          forceStart={forceWelcomeTour}
+        />
+      )}
     </div>
   );
 }

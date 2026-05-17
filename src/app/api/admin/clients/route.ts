@@ -24,7 +24,7 @@ export async function POST(req: NextRequest) {
   if (!isAdmin(req)) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const body = await req.json();
-  const { name, company, email, access_code, services, service_timeline, contract_months, admin_notes } = body;
+  const { name, company, email, access_code, services, service_timeline, contract_months, admin_notes, client_type } = body;
 
   if (!name || !email || !access_code) {
     return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
@@ -43,6 +43,7 @@ export async function POST(req: NextRequest) {
       service_timeline: service_timeline ?? [],
       contract_months: contract_months ?? 1,
       admin_notes: admin_notes ?? null,
+      client_type: client_type ?? "business",
     })
     .select()
     .single();
@@ -132,14 +133,16 @@ export async function PATCH(req: NextRequest) {
   if (!isAdmin(req)) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const body = await req.json();
-  const { client_id, services, service_timeline, contract_months, admin_notes } = body;
+  const { client_id, services, service_timeline, contract_months, admin_notes, client_type } = body;
 
   if (!client_id) return NextResponse.json({ error: "client_id required" }, { status: 400 });
 
   const supabase = createServerClient();
+  const updatePayload: Record<string, unknown> = { services, service_timeline, contract_months, admin_notes };
+  if (client_type !== undefined) updatePayload.client_type = client_type;
   const { data, error } = await supabase
     .from("clients")
-    .update({ services, service_timeline, contract_months, admin_notes })
+    .update(updatePayload)
     .eq("id", client_id)
     .select()
     .single();

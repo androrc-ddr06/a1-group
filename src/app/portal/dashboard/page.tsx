@@ -1,7 +1,6 @@
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import { createSessionClient, createServerClient } from "@/lib/supabase-server";
-import { FileText } from "lucide-react";
 import DashboardClient from "./DashboardClient";
 
 async function getClientData() {
@@ -99,39 +98,7 @@ export default async function ClientDashboard() {
     redirect("/portal/onboarding");
   }
 
-  // Onboarded but no contract yet, draft, or changes_requested — show holding page
-  if (!contract || contract.contract_status === "draft" || contract.contract_status === "changes_requested") {
-    const firstName = client.name.split(" ")[0];
-    const isChangesRequested = contract?.contract_status === "changes_requested";
-    return (
-      <div className="min-h-screen bg-[#0a1628] flex items-center justify-center px-6">
-        <div className="text-center max-w-md">
-          <div className="w-16 h-16 rounded-full bg-[#c9a84c]/10 border border-[#c9a84c]/20 flex items-center justify-center mx-auto mb-6">
-            <FileText size={28} className="text-[#c9a84c]" />
-          </div>
-          {isChangesRequested ? (
-            <>
-              <h1 className="text-2xl font-extrabold text-white mb-3">Revision in Progress</h1>
-              <p className="text-white/50 text-sm leading-relaxed">
-                Your feedback has been received. Alejandro is preparing a revised contract for you. You&apos;ll get an email once it&apos;s ready to review.
-              </p>
-            </>
-          ) : (
-            <>
-              <h1 className="text-2xl font-extrabold text-white mb-3">Got it, {firstName}!</h1>
-              <p className="text-white/50 text-sm leading-relaxed mb-3">
-                We&apos;ve received your answers and are getting things prepared on our end. Alejandro will reach out within the next 12 hours to schedule a meeting and walk you through next steps.
-              </p>
-              <p className="text-white/30 text-sm leading-relaxed">
-                Once your service agreement is ready, you&apos;ll get an email with a link to review and sign it right here.
-              </p>
-            </>
-          )}
-          <p className="text-white/25 text-xs mt-6">Questions? <a href="/#contact" className="text-[#c9a84c] hover:underline">Contact A1 Group</a></p>
-        </div>
-      </div>
-    );
-  }
+  const contractPending = !contract || contract.contract_status === "draft" || contract.contract_status === "changes_requested";
 
   // Contract approved but not signed
   if (contract.contract_status === "approved") {
@@ -152,6 +119,8 @@ export default async function ClientDashboard() {
       project={project ?? null}
       updates={updates}
       pendingContentCount={pendingContentCount}
+      contractPending={contractPending}
+      contractStatus={contract?.contract_status ?? null}
     />
   );
 }

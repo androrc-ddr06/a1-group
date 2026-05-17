@@ -8,6 +8,12 @@ const ADMIN_SECRET = "Familiarc15$";
 
 const ALL_SERVICES = ["Website", "Branding", "Social Media", "Content Creation", "Paid Ads", "AI Agents"];
 
+const CLIENT_TYPES = [
+  { value: "business", label: "Business / Brand", description: "Companies, restaurants, shops" },
+  { value: "artist", label: "Artist / Creator", description: "Musicians, influencers, personal brands" },
+  { value: "nonprofit", label: "Nonprofit / School", description: "Schools, charities, community orgs" },
+];
+
 function generateCode() {
   return Math.random().toString(36).substring(2, 10).toUpperCase();
 }
@@ -97,6 +103,7 @@ export default function AdminClients() {
     name: "", company: "", email: "", notes: "",
     services: [] as string[],
     contract_months: 3,
+    client_type: "business",
   });
   const [timeline, setTimeline] = useState<TimelineEntry[]>([]);
 
@@ -160,12 +167,13 @@ export default function AdminClients() {
         service_timeline: timeline,
         contract_months: newClient.contract_months,
         admin_notes: newClient.notes,
+        client_type: newClient.client_type,
       }),
     });
     const data = await res.json();
     if (!res.ok) { setAddError(data.error || "Failed to create client."); return; }
     setShowNew(false);
-    setNewClient({ name: "", company: "", email: "", notes: "", services: [], contract_months: 3 });
+    setNewClient({ name: "", company: "", email: "", notes: "", services: [], contract_months: 3, client_type: "business" });
     setTimeline([]);
     fetchClients();
   }
@@ -365,6 +373,31 @@ export default function AdminClients() {
                     placeholder="e.g. Client wants luxury feel, discussed $1,500 website, needs booking system, tight 3-week deadline..."
                     className="w-full bg-white/5 border border-white/15 rounded-xl px-4 py-3 text-white placeholder:text-white/25 text-sm focus:outline-none focus:border-[#c9a84c]/60 transition-all resize-none"
                   />
+                </div>
+
+                {/* Client Type */}
+                <div>
+                  <label className="text-white/50 text-xs uppercase tracking-wide block mb-2">Client Type</label>
+                  <div className="space-y-2">
+                    {CLIENT_TYPES.map((ct) => (
+                      <button
+                        key={ct.value}
+                        type="button"
+                        onClick={() => setNewClient((p) => ({ ...p, client_type: ct.value }))}
+                        className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-left transition-all border ${
+                          newClient.client_type === ct.value
+                            ? "bg-[#c9a84c]/15 border-[#c9a84c] text-[#c9a84c]"
+                            : "bg-white/5 border-white/10 text-white/50 hover:text-white hover:border-white/30"
+                        }`}
+                      >
+                        <div className={`w-3.5 h-3.5 rounded-full border-2 flex-shrink-0 ${newClient.client_type === ct.value ? "border-[#c9a84c] bg-[#c9a84c]" : "border-white/30"}`} />
+                        <div>
+                          <div className="text-xs font-semibold">{ct.label}</div>
+                          <div className={`text-xs ${newClient.client_type === ct.value ? "text-[#c9a84c]/60" : "text-white/30"}`}>{ct.description}</div>
+                        </div>
+                      </button>
+                    ))}
+                  </div>
                 </div>
 
                 {/* Contract length */}

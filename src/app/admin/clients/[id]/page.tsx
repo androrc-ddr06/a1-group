@@ -100,6 +100,7 @@ type FullClient = {
   service_timeline: { month: number; service: string; status: "active" | "upcoming" }[];
   contract_months: number;
   admin_notes: string | null;
+  client_type: string;
   created_at: string;
   projects: Project[];
   onboarding_responses: OnboardingResponse[];
@@ -135,6 +136,12 @@ const statusColors: Record<string, string> = {
   active: "bg-emerald-500/15 text-emerald-400",
   pending: "bg-amber-500/15 text-amber-400",
   onboarding: "bg-blue-500/15 text-blue-400",
+};
+
+const clientTypeLabels: Record<string, string> = {
+  business: "Business",
+  artist: "Artist / Creator",
+  nonprofit: "Nonprofit / School",
 };
 
 const contractStatusColors: Record<string, string> = {
@@ -554,6 +561,9 @@ export default function ClientDetailPage() {
               <h1 className="text-2xl font-extrabold text-white">{client.name}</h1>
               <span className={`text-xs font-semibold px-3 py-1 rounded-full capitalize ${statusColors[client.status] ?? "bg-white/10 text-white/40"}`}>
                 {client.status}
+              </span>
+              <span className="text-xs font-semibold px-3 py-1 rounded-full bg-white/8 text-white/50">
+                {clientTypeLabels[client.client_type] ?? client.client_type}
               </span>
             </div>
             <div className="flex items-center gap-3 mt-1 flex-wrap">

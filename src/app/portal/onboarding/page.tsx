@@ -14,6 +14,7 @@ export default function OnboardingPage() {
   const [done, setDone] = useState(false);
   const [clientId, setClientId] = useState<string | null>(null);
   const [activeServices, setActiveServices] = useState<string[]>([]);
+  const [clientType, setClientType] = useState<string>("business");
   const [error, setError] = useState("");
 
   const [data, setData] = useState({
@@ -40,6 +41,12 @@ export default function OnboardingPage() {
     existingScripts: "",
     // General marketing
     targetAudience: "", mainGoal: "", monthlyBudget: "", topCompetitors: "",
+    // Artist type
+    artistName: "", genre: "", currentFollowing: "", artistGoals: "",
+    existingBranding: "", keyPlatforms: [] as string[],
+    // Nonprofit type
+    orgType: "", missionStatement: "", primaryAudience: "",
+    fundingContext: "", complianceNeeds: "",
   });
 
   useEffect(() => {
@@ -51,6 +58,9 @@ export default function OnboardingPage() {
       const client = await res.json();
       setClientId(client.id);
 
+      const type = client.client_type ?? "business";
+      setClientType(type);
+
       const active = (client.service_timeline ?? [])
         .filter((e: { status: string }) => e.status === "active")
         .map((e: { service: string }) => e.service);
@@ -61,6 +71,8 @@ export default function OnboardingPage() {
 
       // Build step list
       const stepList = ["General Info"];
+      if (type === "artist") stepList.push("Artist Profile");
+      if (type === "nonprofit") stepList.push("Organization");
       if (services.includes("Website")) stepList.push("Website");
       if (services.includes("Branding")) stepList.push("Branding");
       if (services.includes("Social Media") || services.includes("Content Creation")) stepList.push("Social Media");
@@ -167,6 +179,19 @@ export default function OnboardingPage() {
         main_goal: data.mainGoal,
         monthly_budget: data.monthlyBudget,
         top_competitors: data.topCompetitors,
+        // Artist
+        artist_name: data.artistName,
+        genre: data.genre,
+        current_following: data.currentFollowing,
+        artist_goals: data.artistGoals,
+        existing_branding: data.existingBranding,
+        key_platforms: data.keyPlatforms.join(", "),
+        // Nonprofit
+        org_type: data.orgType,
+        mission_statement: data.missionStatement,
+        primary_audience: data.primaryAudience,
+        funding_context: data.fundingContext,
+        compliance_needs: data.complianceNeeds,
       }),
     });
 
@@ -237,12 +262,20 @@ export default function OnboardingPage() {
           {/* STEP: General Info */}
           {currentStepName === "General Info" && (
             <div className="space-y-5">
-              <h2 className="text-white font-bold text-2xl mb-1">Tell Us About Your Company</h2>
+              <h2 className="text-white font-bold text-2xl mb-1">
+                {clientType === "artist" ? "Tell Us About You" : clientType === "nonprofit" ? "Tell Us About Your Organization" : "Tell Us About Your Company"}
+              </h2>
               <p className="text-white/40 text-sm mb-6">This helps us understand your brand and tailor our work.</p>
-              <Field label="Company Name" required><input type="text" value={data.companyName} onChange={(e) => set("companyName", e.target.value)} placeholder="Roosters Rolling Barbecue" className={ic} /></Field>
-              <Field label="Industry"><input type="text" value={data.industry} onChange={(e) => set("industry", e.target.value)} placeholder="Food & Beverage, Retail, Services..." className={ic} /></Field>
+              <Field label={clientType === "artist" ? "Artist / Stage Name" : clientType === "nonprofit" ? "Organization Name" : "Company Name"} required>
+                <input type="text" value={data.companyName} onChange={(e) => set("companyName", e.target.value)} placeholder={clientType === "artist" ? "Your stage name or artist name" : clientType === "nonprofit" ? "CCCA Charter School" : "Roosters Rolling Barbecue"} className={ic} />
+              </Field>
+              <Field label={clientType === "artist" ? "Genre / Niche" : "Industry"}>
+                <input type="text" value={data.industry} onChange={(e) => set("industry", e.target.value)} placeholder={clientType === "artist" ? "Hip-Hop, R&B, Lifestyle Creator..." : "Food & Beverage, Retail, Services..."} className={ic} />
+              </Field>
               <Field label="Website (if you have one)"><input type="url" value={data.website} onChange={(e) => set("website", e.target.value)} placeholder="https://yourbusiness.com" className={ic} /></Field>
-              <Field label="Describe Your Business" required><textarea rows={4} value={data.description} onChange={(e) => set("description", e.target.value)} placeholder="What do you do, who do you serve, and what makes you different?" className={`${ic} resize-none`} /></Field>
+              <Field label={clientType === "artist" ? "Tell Us About Yourself" : clientType === "nonprofit" ? "Describe Your Organization" : "Describe Your Business"} required>
+                <textarea rows={4} value={data.description} onChange={(e) => set("description", e.target.value)} placeholder={clientType === "artist" ? "Who are you as an artist, what's your story, and what makes you stand out?" : clientType === "nonprofit" ? "What does your organization do, who do you serve, and what's your mission?" : "What do you do, who do you serve, and what makes you different?"} className={`${ic} resize-none`} />
+              </Field>
               <Field label="Company Logo">
                 <label className="flex flex-col items-center justify-center gap-3 border-2 border-dashed border-white/15 rounded-xl py-8 cursor-pointer hover:border-[#c9a84c]/40 transition-colors">
                   <Upload size={24} className="text-white/30" />
@@ -252,6 +285,64 @@ export default function OnboardingPage() {
               </Field>
               <Field label="Brand Colors"><input type="text" value={data.brandColors} onChange={(e) => set("brandColors", e.target.value)} placeholder="#FF5733, Navy Blue, White..." className={ic} /></Field>
               <Field label="Font Preferences"><input type="text" value={data.fontPreferences} onChange={(e) => set("fontPreferences", e.target.value)} placeholder="Modern, bold, serif... or 'no preference'" className={ic} /></Field>
+            </div>
+          )}
+
+          {/* STEP: Artist Profile */}
+          {currentStepName === "Artist Profile" && (
+            <div className="space-y-5">
+              <h2 className="text-white font-bold text-2xl mb-1">Your Artist Profile</h2>
+              <p className="text-white/40 text-sm mb-6">Help us understand your brand and where you&apos;re headed.</p>
+              <Field label="Stage Name / Artist Name" required><input type="text" value={data.artistName} onChange={(e) => set("artistName", e.target.value)} placeholder="Your artist or stage name" className={ic} /></Field>
+              <Field label="Genre / Niche" required><input type="text" value={data.genre} onChange={(e) => set("genre", e.target.value)} placeholder="e.g. Hip-Hop, R&B, Pop, Lifestyle Creator..." className={ic} /></Field>
+              <Field label="Current following (approximate total across all platforms)"><input type="text" value={data.currentFollowing} onChange={(e) => set("currentFollowing", e.target.value)} placeholder="e.g. 10k Instagram, 5k TikTok..." className={ic} /></Field>
+              <Field label="What are your primary goals?" required>
+                <textarea rows={3} value={data.artistGoals} onChange={(e) => set("artistGoals", e.target.value)} placeholder="e.g. Get signed to a label, reach 100k followers, land brand deals, drop an album, get on Spotify playlists..." className={`${ic} resize-none`} />
+              </Field>
+              <Field label="Do you have existing branding? (logo, colors, visual identity)">
+                <textarea rows={2} value={data.existingBranding} onChange={(e) => set("existingBranding", e.target.value)} placeholder="Describe what you have or type 'none' — we&apos;ll build from scratch" className={`${ic} resize-none`} />
+              </Field>
+              <Field label="Where are you most active?">
+                <div className="grid grid-cols-3 gap-2">
+                  {["Instagram", "TikTok", "YouTube", "Spotify", "SoundCloud", "Other"].map((p) => (
+                    <button key={p} type="button" onClick={() => { const cur = data.keyPlatforms; const updated = cur.includes(p) ? cur.filter((x) => x !== p) : [...cur, p]; set("keyPlatforms", updated); }} className={`px-3 py-2 rounded-xl text-xs font-medium transition-all border ${data.keyPlatforms.includes(p) ? "bg-[#c9a84c]/20 border-[#c9a84c] text-[#c9a84c]" : "bg-white/5 border-white/10 text-white/50 hover:text-white hover:border-white/30"}`}>
+                      {p}
+                    </button>
+                  ))}
+                </div>
+              </Field>
+            </div>
+          )}
+
+          {/* STEP: Organization */}
+          {currentStepName === "Organization" && (
+            <div className="space-y-5">
+              <h2 className="text-white font-bold text-2xl mb-1">Your Organization</h2>
+              <p className="text-white/40 text-sm mb-6">Help us understand who you serve and what you stand for.</p>
+              <Field label="Organization Type" required>
+                <div className="grid grid-cols-2 gap-2">
+                  {["School / Charter School", "Nonprofit", "Community Org", "Government Agency", "Other"].map((t) => (
+                    <button key={t} type="button" onClick={() => set("orgType", data.orgType === t ? "" : t)} className={`px-3 py-2 rounded-xl text-xs font-medium text-left transition-all border ${data.orgType === t ? "bg-[#c9a84c]/20 border-[#c9a84c] text-[#c9a84c]" : "bg-white/5 border-white/10 text-white/50 hover:text-white hover:border-white/30"}`}>
+                      {t}
+                    </button>
+                  ))}
+                </div>
+              </Field>
+              <Field label="Mission Statement" required>
+                <textarea rows={3} value={data.missionStatement} onChange={(e) => set("missionStatement", e.target.value)} placeholder="Describe your mission in 1-2 sentences..." className={`${ic} resize-none`} />
+              </Field>
+              <Field label="Who do you primarily serve?">
+                <input type="text" value={data.primaryAudience} onChange={(e) => set("primaryAudience", e.target.value)} placeholder="e.g. High school students aged 14-18, low-income families in Sacramento..." className={ic} />
+              </Field>
+              <Field label="How is your organization funded?">
+                <select value={data.fundingContext} onChange={(e) => set("fundingContext", e.target.value)} className={ic} style={{ colorScheme: "dark" }}>
+                  <option value="" className="bg-[#0a1628]">Select...</option>
+                  {["Grant-funded", "Donor-funded", "Tuition / fee-based", "Government / public", "Mixed funding", "Other"].map((o) => <option key={o} className="bg-[#0a1628]">{o}</option>)}
+                </select>
+              </Field>
+              <Field label="Any compliance or accessibility requirements?">
+                <input type="text" value={data.complianceNeeds} onChange={(e) => set("complianceNeeds", e.target.value)} placeholder="e.g. ADA compliance, FERPA, COPPA, bilingual content..." className={ic} />
+              </Field>
             </div>
           )}
 
