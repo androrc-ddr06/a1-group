@@ -5,6 +5,18 @@ function isAdmin(req: NextRequest) {
   return req.headers.get("x-admin-secret") === process.env.ADMIN_SECRET;
 }
 
+export async function DELETE(
+  req: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  if (!isAdmin(req)) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  const { id } = await params;
+  const supabase = createServerClient();
+  const { error } = await supabase.from("clients").delete().eq("id", id);
+  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+  return NextResponse.json({ ok: true });
+}
+
 export async function PATCH(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> }

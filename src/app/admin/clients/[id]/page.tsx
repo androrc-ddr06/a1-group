@@ -172,6 +172,10 @@ export default function ClientDetailPage() {
   const [assetUrl, setAssetUrl] = useState("");
   const [savingAssets, setSavingAssets] = useState(false);
 
+  // Delete
+  const [deleteModal, setDeleteModal] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+
   // Contract
   const [isDraftingContract, setIsDraftingContract] = useState(false);
   const [declineModal, setDeclineModal] = useState(false);
@@ -321,6 +325,17 @@ export default function ClientDetailPage() {
     setAssetUrl("");
     await fetchClient();
     setSavingAssets(false);
+  }
+
+  async function handleDeleteClient() {
+    setDeleting(true);
+    const res = await fetch(`/api/admin/clients/${id}`, { method: "DELETE", headers });
+    if (res.ok) {
+      router.push("/admin/clients");
+    } else {
+      setDeleting(false);
+      setDeleteModal(false);
+    }
   }
 
   async function handleDeleteAsset(assetId: string) {
@@ -637,6 +652,23 @@ export default function ClientDetailPage() {
                   </div>
                 </div>
               )}
+            </div>
+
+            {/* Danger zone */}
+            <div className="bg-red-950/20 border border-red-500/20 rounded-2xl p-6">
+              <h3 className="text-red-400/70 text-xs uppercase tracking-wide mb-3">Danger Zone</h3>
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-white/70 text-sm font-medium">Delete Client</p>
+                  <p className="text-white/30 text-xs mt-0.5">Permanently deletes this client and all associated data.</p>
+                </div>
+                <button
+                  onClick={() => setDeleteModal(true)}
+                  className="flex items-center gap-2 bg-red-500/15 hover:bg-red-500/25 text-red-400 font-semibold text-sm px-4 py-2 rounded-full transition-all border border-red-500/20"
+                >
+                  <Trash2 size={14} /> Delete Client
+                </button>
+              </div>
             </div>
           </div>
         )}
@@ -1174,6 +1206,40 @@ export default function ClientDetailPage() {
             >
               {editSaving ? "Saving..." : "Approve & Send →"}
             </button>
+          </div>
+        </div>
+      )}
+
+      {/* ─── DELETE CLIENT MODAL ─── */}
+      {deleteModal && (
+        <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center px-6">
+          <div className="bg-[#0f2040] border border-red-500/20 rounded-2xl p-8 w-full max-w-md">
+            <h2 className="text-white font-bold text-lg mb-2">Delete Client?</h2>
+            <p className="text-white/50 text-sm mb-1">
+              This will permanently delete <span className="text-white font-semibold">{client.name}</span> and all their data:
+            </p>
+            <ul className="text-white/30 text-xs space-y-0.5 mb-6 list-disc list-inside">
+              <li>Projects, tasks, and progress</li>
+              <li>Contracts and payments</li>
+              <li>Onboarding responses and AI brief</li>
+              <li>Updates and assets</li>
+            </ul>
+            <div className="flex gap-3">
+              <button
+                onClick={() => setDeleteModal(false)}
+                disabled={deleting}
+                className="flex-1 py-3 rounded-full border border-white/15 text-white/50 hover:text-white text-sm font-medium transition-colors disabled:opacity-40"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleDeleteClient}
+                disabled={deleting}
+                className="flex-1 flex items-center justify-center gap-2 bg-red-500/20 hover:bg-red-500/30 text-red-400 font-bold text-sm py-3 rounded-full transition-all disabled:opacity-40"
+              >
+                {deleting ? "Deleting..." : "Yes, Delete Permanently"}
+              </button>
+            </div>
           </div>
         </div>
       )}

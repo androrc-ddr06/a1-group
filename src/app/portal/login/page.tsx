@@ -12,6 +12,10 @@ export default function PortalLogin() {
   const [showPass, setShowPass] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [forgotMode, setForgotMode] = useState(false);
+  const [forgotEmail, setForgotEmail] = useState("");
+  const [forgotSent, setForgotSent] = useState(false);
+  const [forgotLoading, setForgotLoading] = useState(false);
 
   const [form, setForm] = useState({
     email: "",
@@ -93,6 +97,18 @@ export default function PortalLogin() {
     setLoading(false);
   }
 
+  async function handleForgotPassword() {
+    if (!forgotEmail.trim()) return;
+    setForgotLoading(true);
+    const supabase = createClient();
+    const baseUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "https://a1group.it.com";
+    await supabase.auth.resetPasswordForEmail(forgotEmail.trim(), {
+      redirectTo: `${baseUrl}/portal/reset-password`,
+    });
+    setForgotSent(true);
+    setForgotLoading(false);
+  }
+
   return (
     <div className="min-h-screen bg-[#0a1628] flex items-center justify-center px-6 py-20">
       <div className="w-full max-w-md">
@@ -107,7 +123,45 @@ export default function PortalLogin() {
             <h1 className="text-white font-bold text-xl">Client Portal</h1>
           </div>
 
+          {/* Forgot password mode */}
+          {forgotMode && (
+            <div>
+              {forgotSent ? (
+                <div className="text-center py-4">
+                  <p className="text-white font-semibold mb-2">Check your email</p>
+                  <p className="text-white/50 text-sm mb-5">We sent a password reset link to <span className="text-white">{forgotEmail}</span>.</p>
+                  <button onClick={() => { setForgotMode(false); setForgotSent(false); setForgotEmail(""); }} className="text-[#c9a84c] text-sm hover:underline">
+                    Back to sign in
+                  </button>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  <p className="text-white/60 text-sm">Enter your email and we&apos;ll send you a reset link.</p>
+                  <input
+                    type="email"
+                    value={forgotEmail}
+                    onChange={(e) => setForgotEmail(e.target.value)}
+                    onKeyDown={(e) => e.key === "Enter" && handleForgotPassword()}
+                    placeholder="you@business.com"
+                    className="w-full bg-white/5 border border-white/15 rounded-xl px-4 py-3 text-white placeholder:text-white/25 text-sm focus:outline-none focus:border-[#c9a84c]/60 transition-all"
+                  />
+                  <button
+                    onClick={handleForgotPassword}
+                    disabled={forgotLoading || !forgotEmail.trim()}
+                    className="w-full flex items-center justify-center gap-2 bg-[#c9a84c] hover:bg-[#d4af61] disabled:opacity-60 text-[#0a1628] font-bold text-sm px-6 py-4 rounded-full transition-all"
+                  >
+                    {forgotLoading ? "Sending..." : "Send Reset Link"}
+                  </button>
+                  <button onClick={() => setForgotMode(false)} className="w-full text-white/30 text-xs hover:text-white/60 transition-colors">
+                    Back to sign in
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
+
           {/* Mode toggle */}
+          {!forgotMode && (<>
           <div className="flex bg-white/5 rounded-xl p-1 mb-6">
             {(["login", "signup"] as const).map((m) => (
               <button
@@ -202,16 +256,26 @@ export default function PortalLogin() {
           </form>
 
           {mode === "login" && (
-            <p className="text-white/30 text-xs text-center mt-4">
-              New client?{" "}
+            <div className="flex items-center justify-between mt-1">
+              <p className="text-white/30 text-xs">
+                New client?{" "}
+                <button
+                  onClick={() => { setMode("signup"); setError(""); }}
+                  className="text-[#c9a84c] hover:text-[#d4af61] font-medium"
+                >
+                  Create your account
+                </button>
+              </p>
               <button
-                onClick={() => { setMode("signup"); setError(""); }}
-                className="text-[#c9a84c] hover:text-[#d4af61] font-medium"
+                onClick={() => { setForgotMode(true); setError(""); }}
+                className="text-white/30 text-xs hover:text-[#c9a84c] transition-colors"
               >
-                Create your account
+                Forgot password?
               </button>
-            </p>
+            </div>
           )}
+          </>)}
+
         </div>
 
         <p className="text-center text-white/20 text-xs mt-6">
