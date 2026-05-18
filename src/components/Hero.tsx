@@ -1,11 +1,24 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import { ArrowRight, ChevronDown } from "lucide-react";
-import { GooeyText } from "@/components/ui/gooey-text-morphing";
 
 const rotatingWords = ["Dominate.", "Convert.", "Grow.", "Stand Out.", "Win."];
 
 export default function Hero() {
+  const [wordIndex, setWordIndex] = useState(0);
+  const [visible, setVisible] = useState(true);
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setVisible(false);
+      setTimeout(() => {
+        setWordIndex((i) => (i + 1) % rotatingWords.length);
+        setVisible(true);
+      }, 300);
+    }, 2500);
+    return () => clearInterval(interval);
+  }, []);
 
   return (
     <section className="relative min-h-screen bg-[#0a1628] flex items-center justify-center overflow-hidden">
@@ -36,26 +49,20 @@ export default function Hero() {
         </div>
 
         {/* Headline */}
-        <div
-          className="mb-4"
+        <h1
+          className="text-5xl sm:text-6xl lg:text-8xl font-extrabold text-white leading-[1.05] tracking-tight mb-4"
           style={{ animation: "fade-up 0.7s ease-out 0.1s both" }}
         >
-          <div className="text-5xl sm:text-6xl lg:text-8xl font-extrabold text-white leading-[1.05] tracking-tight mb-10">
-            We Build Brands
-          </div>
-          <div className="relative flex items-center justify-center h-[1.15em]">
-            <span className="text-5xl sm:text-6xl lg:text-8xl font-extrabold text-[#c9a84c] leading-none tracking-tight whitespace-nowrap">
-              That&nbsp;
-            </span>
-            <GooeyText
-              texts={rotatingWords}
-              morphTime={1.2}
-              cooldownTime={2}
-              className="h-full w-[280px] sm:w-[380px] lg:w-[520px]"
-              textClassName="text-5xl sm:text-6xl lg:text-8xl font-extrabold text-white tracking-tight whitespace-nowrap"
-            />
-          </div>
-        </div>
+          We Build Brands
+          <br />
+          <span className="text-[#c9a84c]">That&nbsp;</span>
+          <span
+            className="text-white inline-block transition-all duration-300"
+            style={{ opacity: visible ? 1 : 0, transform: visible ? "translateY(0)" : "translateY(10px)" }}
+          >
+            {rotatingWords[wordIndex]}
+          </span>
+        </h1>
 
         {/* Subheadline */}
         <p
