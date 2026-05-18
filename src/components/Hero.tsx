@@ -43,16 +43,16 @@ export default function Hero() {
           <div className="text-5xl sm:text-6xl lg:text-8xl font-extrabold text-white leading-[1.05] tracking-tight">
             We Build Brands
           </div>
-          <div className="flex items-center justify-center gap-0 mt-1">
-            <span className="text-5xl sm:text-6xl lg:text-8xl font-extrabold text-[#c9a84c] leading-[1.05] tracking-tight">
+          <div className="relative flex items-center justify-center mt-2 h-[1.15em]">
+            <span className="text-5xl sm:text-6xl lg:text-8xl font-extrabold text-[#c9a84c] leading-none tracking-tight whitespace-nowrap">
               That&nbsp;
             </span>
             <GooeyText
               texts={rotatingWords}
               morphTime={1.2}
               cooldownTime={2}
-              className="h-[1.1em] w-[6ch] sm:w-[7ch]"
-              textClassName="text-5xl sm:text-6xl lg:text-8xl font-extrabold text-white tracking-tight"
+              className="h-full w-[280px] sm:w-[380px] lg:w-[520px]"
+              textClassName="text-5xl sm:text-6xl lg:text-8xl font-extrabold text-white tracking-tight whitespace-nowrap"
             />
           </div>
         </div>
