@@ -13,7 +13,7 @@ function BriefViewer() {
 
   useEffect(() => {
     if (!url) { setError("No brief URL provided."); setLoading(false); return; }
-    fetch(url)
+    fetch(url, { cache: "no-store" })
       .then((r) => r.text())
       .then((text) => { setHtml(text); setLoading(false); })
       .catch(() => { setError("Could not load brief."); setLoading(false); });

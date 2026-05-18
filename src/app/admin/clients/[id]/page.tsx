@@ -941,7 +941,7 @@ export default function ClientDetailPage() {
                     </span>
                     {contract.contract_html_url && (
                       <a
-                        href={`/admin/brief?url=${encodeURIComponent(contract.contract_html_url)}`}
+                        href={`/admin/brief?url=${encodeURIComponent(contract.contract_html_url)}&t=${new Date(contract.created_at).getTime()}`}
                         target="_blank"
                         rel="noopener noreferrer"
                         className="flex items-center gap-1.5 text-white/40 hover:text-white/70 text-xs transition-colors"
@@ -1398,7 +1398,7 @@ export default function ClientDetailPage() {
             <div className="flex items-center gap-4">
               {contract?.contract_html_url && (
                 <a
-                  href={`/admin/brief?url=${encodeURIComponent(contract.contract_html_url)}`}
+                  href={`/admin/brief?url=${encodeURIComponent(contract.contract_html_url)}&t=${Date.now()}`}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="text-white/40 hover:text-white/70 text-xs flex items-center gap-1.5 transition-colors"
