@@ -201,6 +201,11 @@ export default function ClientDetailPage() {
   const [deleteModal, setDeleteModal] = useState(false);
   const [deleting, setDeleting] = useState(false);
 
+  // Manual payment
+  const [markPaidOpen, setMarkPaidOpen] = useState(false);
+  const [markPaidAmount, setMarkPaidAmount] = useState("");
+  const [markingPaid, setMarkingPaid] = useState(false);
+
   // Content
   const [contentBatches, setContentBatches] = useState<ContentBatch[]>([]);
   const [contentLabel, setContentLabel] = useState("");
@@ -337,6 +342,21 @@ export default function ClientDetailPage() {
       await fetchClient();
     }
     setPostingUpdate(false);
+  }
+
+  async function handleMarkPaid() {
+    const cents = Math.round(parseFloat(markPaidAmount) * 100);
+    if (!cents || isNaN(cents)) return;
+    setMarkingPaid(true);
+    await fetch(`/api/admin/clients/${id}/payment`, {
+      method: "POST",
+      headers,
+      body: JSON.stringify({ amount_cents: cents, payment_type: "manual" }),
+    });
+    setMarkingPaid(false);
+    setMarkPaidOpen(false);
+    setMarkPaidAmount("");
+    fetchClient();
   }
 
   async function handleApproveContract(contractId: string) {
@@ -681,7 +701,51 @@ export default function ClientDetailPage() {
 
             {/* Payments */}
             <div className="bg-[#0a1628] border border-white/10 rounded-2xl p-6">
-              <h3 className="text-white/40 text-xs uppercase tracking-wide mb-4">Payments</h3>
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-white/40 text-xs uppercase tracking-wide">Payments</h3>
+                {!client.payments?.some((p) => p.status === "paid") && (
+                  <button
+                    onClick={() => {
+                      const upfront = contract?.payment_split?.upfront_cents;
+                      setMarkPaidAmount(upfront ? String(upfront / 100) : "");
+                      setMarkPaidOpen(true);
+                    }}
+                    className="text-xs font-semibold px-3 py-1.5 rounded-full bg-[#c9a84c]/15 text-[#c9a84c] hover:bg-[#c9a84c]/25 transition-colors"
+                  >
+                    + Mark as Paid
+                  </button>
+                )}
+              </div>
+              {markPaidOpen && (
+                <div className="bg-white/5 border border-white/10 rounded-xl p-4 mb-4 space-y-3">
+                  <p className="text-white/60 text-xs font-semibold uppercase tracking-wide">Confirm Manual Payment</p>
+                  <div className="flex items-center gap-2">
+                    <span className="text-white/40 text-sm">$</span>
+                    <input
+                      type="number"
+                      value={markPaidAmount}
+                      onChange={(e) => setMarkPaidAmount(e.target.value)}
+                      placeholder="0.00"
+                      className="flex-1 bg-white/5 border border-white/15 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-[#c9a84c]/60"
+                    />
+                  </div>
+                  <div className="flex gap-2">
+                    <button
+                      onClick={handleMarkPaid}
+                      disabled={markingPaid || !markPaidAmount}
+                      className="flex-1 bg-[#c9a84c] hover:bg-[#d4af61] disabled:opacity-50 text-[#0a1628] font-bold text-sm py-2 rounded-full transition-all"
+                    >
+                      {markingPaid ? "Saving…" : "Confirm Payment Received"}
+                    </button>
+                    <button
+                      onClick={() => setMarkPaidOpen(false)}
+                      className="text-white/30 hover:text-white/60 text-sm px-3 transition-colors"
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                </div>
+              )}
               {client.payments?.length > 0 ? (
                 <div className="space-y-3">
                   {client.payments.map((p) => (

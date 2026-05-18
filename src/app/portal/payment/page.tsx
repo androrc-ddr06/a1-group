@@ -2,7 +2,7 @@
 
 import { useState, useEffect, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { Loader2, CreditCard, CheckCircle } from "lucide-react";
+import { Loader2, CreditCard, CheckCircle, Smartphone, Lock } from "lucide-react";
 import Link from "next/link";
 
 type PaymentSplit = {
@@ -20,12 +20,11 @@ function PaymentContent() {
   const [split, setSplit] = useState<PaymentSplit | null>(null);
   const [loading, setLoading] = useState(true);
   const [verifying, setVerifying] = useState(success && !!sessionId);
-  const [paying, setPaying] = useState(false);
-  const [error, setError] = useState("");
+  const [zelleSent, setZelleSent] = useState(false);
+  const [zelleSending, setZelleSending] = useState(false);
 
   useEffect(() => {
     async function load() {
-      // Coming back from Stripe — verify and mark paid, then go straight to dashboard
       if (success && sessionId) {
         setVerifying(true);
         const verifyRes = await fetch(`/api/portal/payment?session_id=${sessionId}`);
@@ -57,17 +56,11 @@ function PaymentContent() {
     load();
   }, [router, success, sessionId]);
 
-  async function handlePay() {
-    setPaying(true);
-    setError("");
-    const res = await fetch("/api/portal/payment", { method: "POST" });
-    const data = await res.json();
-    if (data.url) {
-      window.location.href = data.url;
-    } else {
-      setError(data.error || "Could not start payment. Please try again.");
-      setPaying(false);
-    }
+  async function handleZelleNotify() {
+    setZelleSending(true);
+    await fetch("/api/portal/payment/zelle-notify", { method: "POST" });
+    setZelleSent(true);
+    setZelleSending(false);
   }
 
   const fmt = (cents: number) => `$${(cents / 100).toLocaleString("en-US", { minimumFractionDigits: 2 })}`;
@@ -93,7 +86,6 @@ function PaymentContent() {
     );
   }
 
-
   return (
     <div className="min-h-screen bg-[#0a1628]">
       <header className="bg-[#0a1628] border-b border-white/10 px-6 py-4">
@@ -106,9 +98,10 @@ function PaymentContent() {
       <div className="max-w-lg mx-auto px-6 py-12">
         <div className="mb-8">
           <h1 className="text-white font-extrabold text-2xl mb-2">Complete Your Payment</h1>
-          <p className="text-white/50 text-sm">Your contract is signed. Complete your deposit to unlock the onboarding form.</p>
+          <p className="text-white/50 text-sm">Your contract is signed. Complete your deposit to get full portal access.</p>
         </div>
 
+        {/* Payment breakdown */}
         {split && (
           <div className="bg-white/5 border border-white/10 rounded-2xl p-6 mb-6 space-y-3">
             <h3 className="text-white font-bold text-sm uppercase tracking-wide mb-4">Payment Breakdown</h3>
@@ -142,21 +135,64 @@ function PaymentContent() {
           </div>
         )}
 
-        {error && (
-          <p className="text-red-400 text-sm bg-red-400/10 border border-red-400/20 rounded-lg px-4 py-2 mb-4">{error}</p>
-        )}
+        <p className="text-white/40 text-xs uppercase tracking-wide font-semibold mb-3">Choose a payment method</p>
 
-        <button
-          onClick={handlePay}
-          disabled={paying}
-          className="w-full flex items-center justify-center gap-2 bg-[#c9a84c] hover:bg-[#d4af61] disabled:opacity-60 text-[#0a1628] font-bold py-4 rounded-full transition-all"
-        >
-          {paying
-            ? <><Loader2 size={16} className="animate-spin" /> Redirecting to Stripe...</>
-            : <><CreditCard size={16} /> Pay {split ? fmt(split.upfront_cents) : ""} Securely →</>
-          }
-        </button>
-        <p className="text-white/25 text-xs text-center mt-3">Powered by Stripe. Your payment info is never stored on our servers.</p>
+        <div className="space-y-4">
+          {/* Zelle — active */}
+          <div className="bg-white/5 border-2 border-[#c9a84c]/50 rounded-2xl p-6">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-10 h-10 rounded-xl bg-[#c9a84c]/15 flex items-center justify-center flex-shrink-0">
+                <Smartphone size={18} className="text-[#c9a84c]" />
+              </div>
+              <div>
+                <div className="text-white font-bold text-sm">Zelle</div>
+                <div className="text-[#c9a84c] text-xs font-semibold">Available now</div>
+              </div>
+            </div>
+            <div className="bg-[#c9a84c]/10 border border-[#c9a84c]/20 rounded-xl px-4 py-3 mb-4">
+              <p className="text-white/50 text-xs mb-1">Send to phone number</p>
+              <p className="text-white font-bold text-lg tracking-wide">707-564-8658</p>
+            </div>
+            <p className="text-white/40 text-xs mb-5 leading-relaxed">
+              Once you&apos;ve sent the payment, tap the button below. We&apos;ll confirm receipt and unlock your portal within a few hours.
+            </p>
+            {zelleSent ? (
+              <div className="flex items-center gap-2 bg-emerald-500/10 border border-emerald-500/20 rounded-xl px-4 py-3">
+                <CheckCircle size={16} className="text-emerald-400 flex-shrink-0" />
+                <p className="text-emerald-400 text-sm font-semibold">Thanks! We&apos;ll verify and unlock your portal shortly.</p>
+              </div>
+            ) : (
+              <button
+                onClick={handleZelleNotify}
+                disabled={zelleSending}
+                className="w-full flex items-center justify-center gap-2 bg-[#c9a84c] hover:bg-[#d4af61] disabled:opacity-60 text-[#0a1628] font-bold py-3.5 rounded-full transition-all"
+              >
+                {zelleSending ? <Loader2 size={15} className="animate-spin" /> : null}
+                {zelleSending ? "Notifying…" : "I've sent my Zelle payment →"}
+              </button>
+            )}
+          </div>
+
+          {/* Stripe — locked/coming soon */}
+          <div className="bg-white/3 border border-white/8 rounded-2xl p-6 opacity-50 cursor-not-allowed select-none">
+            <div className="flex items-center gap-3 mb-3">
+              <div className="w-10 h-10 rounded-xl bg-white/8 flex items-center justify-center flex-shrink-0">
+                <CreditCard size={18} className="text-white/30" />
+              </div>
+              <div>
+                <div className="text-white/50 font-bold text-sm">Credit / Debit Card</div>
+                <div className="flex items-center gap-1 text-white/30 text-xs">
+                  <Lock size={10} /> Coming soon
+                </div>
+              </div>
+            </div>
+            <p className="text-white/25 text-xs">Online card payments will be available shortly.</p>
+          </div>
+        </div>
+
+        <p className="text-white/20 text-xs text-center mt-6">
+          Questions? <Link href="/#contact" className="text-[#c9a84c]/60 hover:text-[#c9a84c]">Contact A1 Group</Link>
+        </p>
       </div>
     </div>
   );
