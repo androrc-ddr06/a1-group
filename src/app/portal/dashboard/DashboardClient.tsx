@@ -12,6 +12,7 @@ import {
   Video,
   CreditCard,
   Lock,
+  Receipt,
 } from "lucide-react";
 import SignOutButton from "./SignOutButton";
 import PortalTour from "./PortalTour";
@@ -35,6 +36,7 @@ type Props = {
   pendingContentCount: number;
   contractPending: boolean;
   contractStatus: string | null;
+  hasPaid: boolean;
 };
 
 function formatDate(dateStr: string | null | undefined) {
@@ -48,7 +50,7 @@ function formatDate(dateStr: string | null | undefined) {
 
 export default function DashboardClient({
   firstName, company, project, updates, pendingContentCount,
-  contractPending, contractStatus,
+  contractPending, contractStatus, hasPaid,
 }: Props) {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -264,6 +266,19 @@ export default function DashboardClient({
             </div>
             <div className="text-[#0a1628] font-semibold text-sm">Reports</div>
           </Link>
+
+          {/* Invoice — only when paid */}
+          {hasPaid && (
+            <Link
+              href="/portal/invoice"
+              className="group bg-white border border-[#0a1628]/8 hover:border-[#0a1628]/20 rounded-2xl p-5 flex flex-col gap-3 transition-all hover:shadow-md"
+            >
+              <div className="w-10 h-10 bg-[#f8fafc] group-hover:bg-[#0a1628] rounded-xl flex items-center justify-center transition-colors">
+                <Receipt size={18} className="text-[#0a1628] group-hover:text-white transition-colors" />
+              </div>
+              <div className="text-[#0a1628] font-semibold text-sm">Invoice</div>
+            </Link>
+          )}
         </div>
 
         {/* Updates feed */}

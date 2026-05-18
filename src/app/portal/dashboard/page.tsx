@@ -121,6 +121,7 @@ export default async function ClientDashboard() {
       pendingContentCount={pendingContentCount}
       contractPending={contractPending}
       contractStatus={contract?.contract_status ?? null}
+      hasPaid={hasPaid}
     />
   );
 }
