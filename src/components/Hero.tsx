@@ -40,10 +40,10 @@ export default function Hero() {
           className="mb-4"
           style={{ animation: "fade-up 0.7s ease-out 0.1s both" }}
         >
-          <div className="text-5xl sm:text-6xl lg:text-8xl font-extrabold text-white leading-[1.05] tracking-tight">
+          <div className="text-5xl sm:text-6xl lg:text-8xl font-extrabold text-white leading-[1.05] tracking-tight mb-4">
             We Build Brands
           </div>
-          <div className="relative flex items-center justify-center mt-2 h-[1.15em]">
+          <div className="relative flex items-center justify-center h-[1.15em]">
             <span className="text-5xl sm:text-6xl lg:text-8xl font-extrabold text-[#c9a84c] leading-none tracking-tight whitespace-nowrap">
               That&nbsp;
             </span>
